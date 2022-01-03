@@ -133,7 +133,7 @@ class Loc(Attribute):
 
     Args:
       value: None or a tuple of floats
-      space: None or a tuple of tuple of floats
+      space: None or a tuple of tuple of floats  ##### todo: what is the space here?
       If tuple of floats, then the actual
     """
     super(Loc, self).__init__(value)
@@ -452,19 +452,12 @@ class ObjectSet(object):
     if not obj.color.has_value:
       obj.color.sample()
 
-    ####
-    lastmap = {"last0": 0,
-               "last1": 1,
-               "last2": 2,
-               }
-    ####
-    ######## todo: introduce lastk operators
     if obj.when is None:
       # If when is None, then object is always presented
       obj.epoch = [0, self.n_epoch]
     else:
       try:
-        obj.epoch = [epoch_now-lastmap[obj.when]-1, epoch_now-lastmap[obj.when]] ### todo: check whether it needs a shift
+        obj.epoch = [epoch_now-const.LASTMAP[obj.when]-1, epoch_now-const.LASTMAP[obj.when]] ### todo: check whether it needs a shift
       except:
         raise NotImplementedError(
           'When value: {:s} is not implemented'.format(str(obj.when)))
@@ -475,9 +468,10 @@ class ObjectSet(object):
     self.end_epoch.insert(i, obj.epoch[1])
 
     # Add to dict
-    for epoch in range(obj.epoch[0], obj.epoch[1]):
+    for epoch in range(obj.epoch[0]+1, obj.epoch[1]+1):  ####xlei: didn't change above shifted here to avoid confusion
       self.dict[epoch].append(obj)
-
+    obj.epoch[0] += 2
+    obj.epoch[1] += 2
     self.last_added_obj = obj
     return self.last_added_obj
 
@@ -564,27 +558,18 @@ class ObjectSet(object):
                       str(type(shape)))
     assert isinstance(space, Space)
 
-    if when == 'last0':
-      # Use the fast implementation
-      return self.select_now(epoch_now, space, color, shape, delete_if_can)
+    epoch_now -= const.LASTMAP[when]
 
-    if when == 'last1': ### todo: to optimize the code here
-      epoch_now -= 1
-    if when == 'last1':
-      epoch_now -= 2
+    # if n_backtrack is None:
+    #   n_backtrack = self.n_max_backtrack   ### xlei: n_backtrack is deleted because of lastest does not exist anymore
 
-    ##### todo: check the n_max_backtrack working mechansim
-    if n_backtrack is None:
-      n_backtrack = self.n_max_backtrack
-
-    epoch_stop = max(0, epoch_now - n_backtrack)
-
-    while epoch_now >= epoch_stop:
-      subset = self.select_now(epoch_now, space, color, shape, delete_if_can)
-      if subset:
-        return subset
-      epoch_now -= 1
-    return []
+    return self.select_now(epoch_now, space, color, shape, delete_if_can)
+    # while epoch_now >= epoch_stop:
+    #   subset = self.select_now(epoch_now, space, color, shape, delete_if_can)
+    #   if subset:
+    #     return subset
+    #   epoch_now -= 1
+    # return []
 
   def select_now(self,
                  epoch_now,

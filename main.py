@@ -69,9 +69,10 @@ def get_target_value(t):
   return t
 
 
-def generate_example(max_memory, max_distractors, task_family, epochs):
+def generate_example(max_memory, max_distractors, task_family, ):
   #random.seed(1)
   task = task_bank.random_task(task_family)
+  epochs = task.n_frames
 
   # To get maximum memory duration, we need to specify the following average
   # memory value
@@ -114,11 +115,10 @@ def log_exceptions(func):
 def main(argv):
     # go shape: point at last sth
     max_distractors = 0
-    max_memory = 1
-    epochs = 4
+    max_memory = 10
     families = list(task_bank.task_family_dict.keys())
     task_family = families[0]
-    example, objset, task = generate_example(max_memory, max_distractors, task_family, epochs)
+    example, objset, task = generate_example(max_memory, max_distractors, task_family)
     print("example", example)
     print("objset", objset)
     print("task", task)

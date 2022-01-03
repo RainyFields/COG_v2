@@ -26,6 +26,7 @@ import tensorflow as tf
 from cognitive import stim_generator as sg
 from cognitive import task_generator as tg
 from cognitive.task_generator import Task
+from cognitive import constants as const
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -40,6 +41,9 @@ class GoShape(Task):
     when1 = sg.random_when()
     objs1 = tg.Select(shape=shape1, when=when1)
     self._operator = tg.Go(objs1)
+
+    ### todo: make it simple and consistent with others
+    self.n_frames = const.LASTMAP[when1]
 
   @property
   def instance_size(self):

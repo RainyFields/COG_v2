@@ -153,13 +153,13 @@ class Task(object):
         inputs = node.get_expected_input(should_be)
 
       if len(node.child) == 1:
-        outputs = [inputs]
+        outputs = [inputs] ## xl:for later interation
       else:
         outputs = inputs
 
       # Update the should_be dictionary for the node children
       for c, output in zip(node.child, outputs):
-        if not isinstance(c, Operator):
+        if not isinstance(c, Operator): # if c is not an Operator
           continue
         if isinstance(output, Skip):
           should_be_dict[c] = Skip()
@@ -210,22 +210,30 @@ class Task(object):
     objset = sg.ObjectSet(n_epoch=n_epoch, n_max_backtrack=n_max_backtrack)
 
     # Guess objects
-    # Importantly, we generate objset backward in time  ###### x.l: here is what we change epoch iteration to no iteratation (maybe also do a conversion from relative index and absolute index?)
-    epoch_now = n_epoch - 1
-    while epoch_now >= 0:
-      if n_distractor == 0:
-        break
-      else:
-        for _ in range(n_distractor):
-          objset.add_distractor(epoch_now)  # distractor
-        objset = self.guess_objset(objset, epoch_now)
-        epoch_now -= 1
+    # Importantly, we generate objset backward in time
+    ## xlei: only update the last epoch
+    ## xlei todo: delete distractor done
+
+    epoch_now = n_epoch-1
+    for _ in range(n_distractor):
+      objset.add_distractor(epoch_now)  # distractor
+    objset = self.guess_objset(objset, epoch_now)
+
+    # epoch_now = n_epoch - 1
+    # while epoch_now >= 0:
+    #   if n_distractor == 0:
+    #     break
+    #   else:
+    #     for _ in range(n_distractor):
+    #       objset.add_distractor(epoch_now)  # distractor
+    #     objset = self.guess_objset(objset, epoch_now)
+    #     epoch_now -= 1
 
     return objset
 
   def get_target(self, objset):
-    return [self(objset, epoch_now) for epoch_now in range(objset.n_epoch)]
-
+    # return [self(objset, epoch_now) for epoch_now in range(0,objset.n_epoch)]
+    return [self(objset, objset.n_epoch-1)]
 
 class Operator(object):
   """Base class for task constructors."""
@@ -887,5 +895,5 @@ def generate_objset(task, n_epoch=30, distractor=True):
     if distractor:
       objset.add(sg.Object(when='last0', deletable=True), epoch_now)
     objset = task.get_expected_input(objset, epoch_now)
-
+    break
   return objset

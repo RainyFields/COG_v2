@@ -23,6 +23,18 @@ import itertools
 import string
 import numpy as np
 
+MAX_MEMORY = 4
+LASTMAP = {}
+for k in range(MAX_MEMORY+1):
+    LASTMAP["last%d"%(k)] = k
+# print(LASTMAP)
+
+ALLWHENS = []
+for k in range(MAX_MEMORY+1):
+    ALLWHENS.append("last%d" % (k))
+ALLWHENS_PROB = [1/(MAX_MEMORY+1)] * len(ALLWHENS)
+
+
 # RGB, from https://sashat.me/2017/01/11/list-of-20-simple-distinct-colors/
 WORD2COLOR = {
     'red': (230, 25, 75),
@@ -59,8 +71,6 @@ ALLCOLORS += [
 ALLSHAPES += list(string.ascii_lowercase)
 
 ALLCOLORSHAPES = [x for x in itertools.product(ALLCOLORS, ALLSHAPES)]
-ALLWHENS = ['last0', 'last1', 'last2']
-ALLWHENS_PROB = [0.5, 0.25, 0.25]  #### todo: to further modify
 
 # When the stimuli are invalid for a task
 INVALID = 'invalid'
