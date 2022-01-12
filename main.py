@@ -31,10 +31,11 @@ import shutil
 import traceback
 
 import numpy as np
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 
 from cognitive import stim_generator as sg
 import cognitive.task_bank as task_bank
+from cognitive import task_generator as tg
 
 FLAGS = tf.flags.FLAGS
 
@@ -43,91 +44,115 @@ tf.flags.DEFINE_integer('max_distractors', 1, 'maximum number of distractors')
 tf.flags.DEFINE_integer('epochs', 4, 'number of epochs')
 tf.flags.DEFINE_boolean('compress', True, 'whether to gzip the files')
 tf.flags.DEFINE_integer('examples_per_family', 2,
-                     'number of examples to generate per task family')
+                        'number of examples to generate per task family')
 tf.flags.DEFINE_string('output_dir', '/tmp/cog',
-                    'Directory to write output (json or tfrecord) to.')
+                       'Directory to write output (json or tfrecord) to.')
 tf.flags.DEFINE_integer('parallel', 0,
-                     'number of parallel processes to use. Only training '
-                     'dataset is generated in parallel.')
-
+                        'number of parallel processes to use. Only training '
+                        'dataset is generated in parallel.')
 
 try:
-  range_fn = xrange  # py 2
+    range_fn = xrange  # py 2
 except NameError:
-  range_fn = range  # py 3
+    range_fn = range  # py 3
 
 
 def get_target_value(t):
-  # Convert target t to string and convert True/False target values
-  # to lower case strings for consistency with other uses of true/false
-  # in vocabularies.
-  t = t.value if hasattr(t, 'value') else str(t)
-  if t is True or t == 'True':
-    return 'true'
-  if t is False or t == 'False':
-    return 'false'
-  return t
+    # Convert target t to string and convert True/False target values
+    # to lower case strings for consistency with other uses of true/false
+    # in vocabularies.
+    t = t.value if hasattr(t, 'value') else str(t)
+    if t is True or t == 'True':
+        return 'true'
+    if t is False or t == 'False':
+        return 'false'
+    return t
 
 
-def generate_example(max_memory, max_distractors, task_family, ):
-  #random.seed(1)
-  task = task_bank.random_task(task_family)
-  epochs = task.n_frames
+def generate_example(max_memory, max_distractors, task_family):
+    # random.seed(1)
+    task = task_bank.random_task(task_family)
+    epochs = task.n_frames
 
-  # To get maximum memory duration, we need to specify the following average
-  # memory value
-  avg_mem = round(max_memory/3.0 + 0.01, 2)
-  if max_distractors == 0:
-      objset = task.generate_objset(n_epoch=epochs,
-                                    average_memory_span=avg_mem)
-  else:
-      objset = task.generate_objset(n_epoch=epochs,
-                                    n_distractor=random.randint(1, max_distractors),
-                                    average_memory_span=avg_mem)
-  # Getting targets can remove some objects from objset.
-  # Create example fields after this call.
-  targets = task.get_target(objset)
+    # To get maximum memory duration, we need to specify the following average
+    # memory value
+    avg_mem = round(max_memory / 3.0 + 0.01, 2)
+    if max_distractors == 0:
+        objset = task.generate_objset(n_epoch=epochs,
+                                      average_memory_span=avg_mem)
+    else:
+        objset = task.generate_objset(n_epoch=epochs,
+                                      n_distractor=random.randint(1, max_distractors),
+                                      average_memory_span=avg_mem)
+    # Getting targets can remove some objects from objset.
+    # Create example fields after this call.
+    targets = task.get_target(objset)
+    example = {
+        'family': task_family,
+        'epochs': epochs,  # saving an epoch explicitly is needed because
+        # there might be no objects in the last epoch.
+        'question': str(task),
+        'objects': [o.dump() for o in objset],
+        'answers': [get_target_value(t) for t in targets]
+    }
+    return example, objset, task
 
-  example = {
-      'family': task_family,
-      'epochs': epochs,  # saving an epoch explicitly is needed because
-                         # there might be no objects in the last epoch.
-      'question': str(task),
-      'objects': [o.dump() for o in objset],
-      'answers': [get_target_value(t) for t in targets]
-  }
-  return example, objset, task
 
+def generate_temporal_example(max_memory, max_distractors, n_tasks):
+    ###TODO: change n_tasks based on max_memory
+    task = task_bank.GoShapeTemporalComposite(n_tasks)
+    epochs = n_tasks * 4
+    avg_mem = round(max_memory / 3.0 + 0.01, 2)
+
+    if max_distractors == 0:
+        objset = task.generate_objset(n_epoch=epochs,
+                                      average_memory_span=avg_mem)
+    else:
+        objset = task.generate_objset(n_epoch=epochs,
+                                      n_distractor=random.randint(1, max_distractors),
+                                      average_memory_span=avg_mem)
+
+    targets = task.get_target(objset)
+
+    example = {
+        'family': 'GoShape Temporal Composite',
+        'epochs': 4,  # saving an epoch explicitly is needed because
+        # there might be no objects in the last epoch.
+        'question': str(task),
+        'objects': [o.dump() for o in objset],
+        'answers': [get_target_value(t) for t in targets]
+    }
+    return
 
 
 def log_exceptions(func):
-  @functools.wraps(func)
-  def wrapped_func(*args, **kwargs):
-    try:
-      return func(*args, **kwargs)
-    except BaseException as e:
-      print('Exception in ' + func.__name__)
-      traceback.print_exc()
-      raise e
-  return wrapped_func
+    @functools.wraps(func)
+    def wrapped_func(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except BaseException as e:
+            print('Exception in ' + func.__name__)
+            traceback.print_exc()
+            raise e
+
+    return wrapped_func
 
 
 def main(argv):
     # go shape: point at last sth
+
     max_distractors = 0
     max_memory = 10
     families = list(task_bank.task_family_dict.keys())
     task_family = families[0]
+
     example, objset, task = generate_example(max_memory, max_distractors, task_family)
     print("example", example)
     print("objset", objset)
     print("task", task)
 
-
+    example, objset, task = generate_temporal_example(max_memory,max_distractors,3)
 
 
 if __name__ == '__main__':
-  tf.compat.v1.app.run(main)
-
-
-
+    tf.app.run(main)
