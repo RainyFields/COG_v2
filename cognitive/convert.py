@@ -14,7 +14,8 @@ class TaskInfoConvert(object):
         self.task_info = [{}]
         self.task_info[0]["task_family"] = task_example["family"]
         self.task_info[0]["is_intact"] = False
-
+        self.task_info[0]["question"] = task_example["question"]
+        self.task_info[0]["answers"] = task_example["answers"]
         # todo: intactable flag matrix
 
         self.n_epochs = task_example["epochs"]
@@ -24,9 +25,9 @@ class TaskInfoConvert(object):
             self.frame_info[i]["frame_index"] = i
             self.frame_info[i]["relative_tasks"] = [0] # refering to the first task in self.task_info
             self.frame_info[i]["relative_task_epoch_idx"] = []
-            while len(self.frame_info[i]["relative_task_epoch_idx"]) != len(self.frame_info[i]["relative_tasks"]):
+            while len(self.frame_info[i]["relative_task_epoch_idx"])+1 != len(self.frame_info[i]["relative_tasks"]):
                 self.frame_info[i]["relative_task_epoch_idx"].append([])
-            self.frame_info[i]["relative_task_epoch_idx"][0] = [i] # referring to the ith epoch in task 0
+            self.frame_info[i]["relative_task_epoch_idx"][0] = i # referring to the ith epoch in task 0
 
             # iterate over task_example["objects"] and check epochs to determine whether that eq current i
             self.frame_info[i]["objs"] = []
@@ -39,7 +40,7 @@ class TaskInfoConvert(object):
                     self.frame_info[i]["objs"][objs_count][features] = obj[features]
                 objs_count += 1
 
-            self.frame_info[i]["objsets"] = [] # list of dicts; in each dicts: location, color, shape, is_distractor
+            # self.frame_info[i]["objsets"] = [] # list of dicts; in each dicts: location, color, shape, is_distractor
 
             self.frame_info[i]["description"] = []
             if i == self.n_epochs - 1:
@@ -58,16 +59,55 @@ class TaskInfoConvert(object):
                     self.frame_info[i]["is_intact"] = True
                     break
 
-    def index_conv(self):
+    def __len__(self):
+        # return number of tasks involved
+        return len(self.task_info)
+
+    def index_conv(self, frame_idx, task_idx):
+        # return epoch index for given frame index and task index
+        return self.frame_info[frame_idx]["relative_task_epoch_idx"][task_idx][0]
+
+    def inv_convert(self):
+        # inverse the frameinfo to task examples
+        examples = []
+        for i in range(len(self)):
+            examples.append[{}]
+            examples[i]["family"] = self.task_info[i]["task_family"]
+            examples[i]["epochs"] = self.task_info[i]["task_len"]
+            examples[i]["question"]= self.task_info[i]["question"]
+            examples[i]["answers"] = self.task_info[i]["answers"]
+            examples[i]["is_intact"] = self.task_info[i]["is_intact"]
+
+            inv_frame_index = [] # frame index if involved in task i
+            objects_feat = []
+            objects = []
+            curr_obj = {}
+            for j, frame in enumerate(self.frame_info):
+                if i in frame["relative_tasks"]:
+                    count_i = frame["relative_tasks"].index(i)
+                    inv_frame_index.append(j)
+                    for obj in self.frame_info[j]["objs"]:
+                        for features in ["location", "shape", "color", "is_distractor"]:
+                            curr_obj[features] = obj[features]
+
+                        if curr_obj not in objects_feat:
+                            curr_obj["epochs"] = [self.frame_info[j]["relative_task_epoch_idx"][count_i]]
+                            objects_feat.append(curr_obj)
+                            objects.append(curr_obj)
+                        else:
+                            obj_idx = objects_feat.index(curr_obj)
+                            objects[obj_idx]["epochs"].append(self.frame_info[j]["relative_task_epoch_idx"][count_i])
+                examples[i]["objects"] = objects
+        return examples
+
+    def inv_convert_objset(self):
+        # convert frame_info to objset
         pass
-        # todo: for given frame index, return epoch index in each task
 
     def frame_update(self):
         pass
         # todo: insert/delete frames upon request
 
-    def inv_convert(self):
-        pass
-        # todo: inverse the frameinfo to task examples
+
 
 
