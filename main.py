@@ -36,6 +36,7 @@ import tensorflow.compat.v1 as tf
 from cognitive import stim_generator as sg
 import cognitive.task_bank as task_bank
 from cognitive import task_generator as tg
+from cognitive.convert import TaskInfoConvert
 
 FLAGS = tf.flags.FLAGS
 
@@ -147,11 +148,13 @@ def main(argv):
     task_family = families[0]
 
     example, objset, task = generate_example(max_memory, max_distractors, task_family)
-    print("example", example)
-    print("objset", objset)
-    print("task", task)
+    frameinfo = TaskInfoConvert(example)
+    print(frameinfo)
+    # print("example", example)
+    # print("objset", objset)
+    # print("task", task)
 
-    example, objset, task = generate_temporal_example(max_memory,max_distractors,3)
+    example, objset, task = generate_temporal_example(max_memory,max_distractors,1)
 
 
 if __name__ == '__main__':
