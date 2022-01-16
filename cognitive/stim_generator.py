@@ -436,11 +436,12 @@ class ObjectSet(object):
         delete_if_can=delete_if_can,
     )
 
-    if obj_subset and not add_if_exist:  # True if more than zero satisfies
+    # True if more than zero objects match the attributes based on epoch_now and backtrack
+    if obj_subset and not add_if_exist:
       self.last_added_obj = obj_subset[-1]
       return self.last_added_obj
 
-    # Interpret the object
+    # instantiate the object attributes
     if not obj.loc.has_value:
       # Randomly generate locations, but avoid objects already placed now
       avoid = [o.loc.value for o in self.select_now(epoch_now)]
@@ -457,21 +458,20 @@ class ObjectSet(object):
       obj.epoch = [0, self.n_epoch]
     else:
       try:
-        obj.epoch = [epoch_now-const.LASTMAP[obj.when]-1, epoch_now-const.LASTMAP[obj.when]] ### todo: check whether it needs a shift
+        obj.epoch = [epoch_now-const.LASTMAP[obj.when], epoch_now-const.LASTMAP[obj.when]+1]
+        ### todo: check whether it needs a shift
       except:
         raise NotImplementedError(
           'When value: {:s} is not implemented'.format(str(obj.when)))
 
     # Insert and maintain order
-    i = bisect_left(self.end_epoch, obj.epoch[1])
+    i = bisect_left(self.end_epoch, obj.epoch[0])
     self.set.insert(i, obj)
-    self.end_epoch.insert(i, obj.epoch[1])
+    self.end_epoch.insert(i, obj.epoch[0])
 
     # Add to dict
-    for epoch in range(obj.epoch[0]+1, obj.epoch[1]+1):  ####xlei: didn't change above shifted here to avoid confusion
+    for epoch in range(obj.epoch[0], obj.epoch[1]):  ####xlei: didn't change above shifted here to avoid confusion
       self.dict[epoch].append(obj)
-    obj.epoch[0] += 2
-    obj.epoch[1] += 2
     self.last_added_obj = obj
     return self.last_added_obj
 

@@ -21,11 +21,12 @@ from __future__ import print_function
 
 from collections import OrderedDict
 import random
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 
 from cognitive import stim_generator as sg
 from cognitive import task_generator as tg
 from cognitive.task_generator import Task
+from cognitive.task_generator import TemporalTask
 from cognitive import constants as const
 
 FLAGS = tf.app.flags.FLAGS
@@ -34,20 +35,43 @@ tf.app.flags.DEFINE_string('task_family', 'all', 'name of the task to be trained
 
 
 class GoShape(Task):
-  """Go to shape X."""
+    """Go to shape X."""
 
-  def __init__(self):
-    shape1 = sg.random_shape()
-    when1 = sg.random_when()
-    objs1 = tg.Select(shape=shape1, when=when1)
-    self._operator = tg.Go(objs1)
+    def __init__(self):
+        shape1 = sg.random_shape()
+        when1 = sg.random_when()
+        objs1 = tg.Select(shape=shape1, when=when1)
+        self._operator = tg.Go(objs1)
 
-    ### todo: make it simple and consistent with others
-    self.n_frames = const.LASTMAP[when1]
+        ### todo: make it simple and consistent with others
+        self.n_frames = const.LASTMAP[when1]+1
 
-  @property
-  def instance_size(self):
-    return sg.n_random_shape() * sg.n_random_when()
+    @property
+    def instance_size(self):
+        return sg.n_random_shape() * sg.n_random_when()
+
+
+class GoShapeTemporal(TemporalTask):
+    """Go to shape X."""
+
+    def __init__(self):
+        super(GoShapeTemporal, self).__init__(locked=True)
+        shape1 = sg.random_shape()
+        when1 = sg.random_when()
+        objs1 = tg.Select(shape=shape1, when=when1)
+        self._operator = tg.Go(objs1)
+
+        ### todo: make it simple and consistent with others
+        self.n_frames = const.LASTMAP[when1]
+
+    @property
+    def instance_size(self):
+        return sg.n_random_shape() * sg.n_random_when()
+
+class GoShapeTemporalComposite(tg.TemporalCompositeTask):
+    def __init__(self, n_tasks):
+        tasks = [GoShapeTemporal() for i in range(n_tasks)]
+        super(GoShapeTemporalComposite, self).__init__(tasks)
 
 
 task_family_dict = OrderedDict([
@@ -56,5 +80,5 @@ task_family_dict = OrderedDict([
 
 
 def random_task(task_family):
-  """Return a random question from the task family."""
-  return task_family_dict[task_family]()
+    """Return a random question from the task family."""
+    return task_family_dict[task_family]()
