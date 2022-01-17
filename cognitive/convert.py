@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class TaskInfoConvert(object):
     """Base class for frame_info"""
 
@@ -9,26 +10,32 @@ class TaskInfoConvert(object):
         " combining with a second task should be implemented incrementally"
         if task_example is None:
             raise ValueError("no tasks is provided")
+
         # initiate frame_info by given task_example
         self.frame_info = []
         self.task_info = [{}]
         self.task_info[0]["task_family"] = task_example["family"]
         self.task_info[0]["is_intact"] = False
+        self.task_info[0]["is_sharable"] = False
 
         # todo: intactable flag matrix
-
         self.n_epochs = task_example["epochs"]
         self.task_info[0]["task_len"] = self.n_epochs
+
         for i in range(self.n_epochs):
             self.frame_info.append({})
             self.frame_info[i]["frame_index"] = i
-            self.frame_info[i]["relative_tasks"] = [0] # refering to the first task in self.task_info
+            self.frame_info[i]["relative_tasks"] = [0]  # referring to the first task in self.task_info
+
+            #
             self.frame_info[i]["relative_task_epoch_idx"] = []
             while len(self.frame_info[i]["relative_task_epoch_idx"]) != len(self.frame_info[i]["relative_tasks"]):
                 self.frame_info[i]["relative_task_epoch_idx"].append([])
-            self.frame_info[i]["relative_task_epoch_idx"][0] = [i] # referring to the ith epoch in task 0
+            self.frame_info[i]["relative_task_epoch_idx"][0] = [i]  # referring to the ith epoch in task 0
 
             # iterate over task_example["objects"] and check epochs to determine whether that eq current i
+            # self.frame_info[i]['objs'] is list of dictionaries
+            # Each dictionary stores info about the jth object
             self.frame_info[i]["objs"] = []
             objs_count = 0
             for obj in task_example["objects"]:
@@ -39,9 +46,11 @@ class TaskInfoConvert(object):
                     self.frame_info[i]["objs"][objs_count][features] = obj[features]
                 objs_count += 1
 
-            self.frame_info[i]["objsets"] = [] # list of dicts; in each dicts: location, color, shape, is_distractor
+            self.frame_info[i]["objsets"] = []  # list of dicts; in each dicts: location, color, shape, is_distractor
 
             self.frame_info[i]["description"] = []
+
+            # if at the response frame
             if i == self.n_epochs - 1:
                 self.frame_info[i]["action"] = task_example["answers"]
                 self.frame_info[i]["description"].append(["ending of task %d" % 0])
@@ -50,7 +59,7 @@ class TaskInfoConvert(object):
                 if i == 0:
                     self.frame_info[i]["description"].append("start of task %d" % 0)
 
-            self.frame_info[i]["is_sharable"] = False # todo: random assign (might need to follow predefined schedule)
+            self.frame_info[i]["is_sharable"] = False  # todo: random assign (might need to follow predefined schedule)
             self.frame_info[i]["is_intact"] = False
             for index in self.frame_info[i]["relative_tasks"]:
                 task = self.task_info[index]
@@ -69,5 +78,3 @@ class TaskInfoConvert(object):
     def inv_convert(self):
         pass
         # todo: inverse the frameinfo to task examples
-
-

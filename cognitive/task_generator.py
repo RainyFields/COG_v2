@@ -263,47 +263,49 @@ class TemporalCompositeTask(Task):
 
     def generate_objset(self, n_epoch, n_distractor=0, average_memory_span=2):
         '''
+
         :param n_epoch: total number of epochs
         :param n_distractor: n_distractors is same for all tasks
         :param average_memory_span: same for all tasks
         :return: objset
         '''
-        n_epoch_per = int(n_epoch / len(self.tasks))
         n_max_backtrack = int(average_memory_span * 3)  ### why do this convertion? waste of time?
         full_objset = sg.ObjectSet(n_epoch=n_epoch, n_max_backtrack=n_max_backtrack)
 
-
-        ###TODO(mbai): what to do with different types of composite tasks?
         ###TODO(mbai): make frame_info, convert task flag info to frames_info
         ###TODO(mbai): change tg.select for checking visual stimuli conflicts
-        assert all(isinstance(task,TemporalTask) for task in self.tasks)
+        assert all(isinstance(task, TemporalTask) for task in self.tasks)
         print(', '.join([str(task) for task in self.tasks]))
-        prev_task = self.tasks[0]
-        objset = prev_task.generate_objset(n_epoch_per, n_distractor, average_memory_span)
-        for obj in objset:
-            full_objset.add(obj,n_epoch_per-1)
-        for i,cur_task in enumerate(self.tasks[1:]):
-            ###TODO(mbai): identify task when
 
-            epoch_now = (i+2)*n_epoch_per-1
-            cur_objset = cur_task.generate_objset(n_epoch_per, n_distractor, average_memory_span)
+        prev_task = self.tasks[0]
+        objset = prev_task.generate_objset(prev_task.n_frames, n_distractor, average_memory_span)
+        epoch_now = prev_task.n_frames - 1
+        for obj in objset:
+            full_objset.add(obj, epoch_now)
+
+        for i, cur_task in enumerate(self.tasks[1:]):
+            ###TODO(mbai): identify task when
+            n_epoch_cur = cur_task.n_frames
+            epoch_now += n_epoch_cur
+            cur_objset = cur_task.generate_objset(n_epoch_cur, n_distractor, average_memory_span)
             print(i)
-            #queue tasks
+            # queue tasks
             if prev_task.locked:
                 for obj in cur_objset:
-                    full_objset.add(obj,epoch_now)
-                print([o.dump() for o in full_objset])
-            #overlap or interleave tasks
+                    full_objset.add(obj, epoch_now)
+            # overlap or interleave tasks
             else:
-                #interleave
+                # interleave
                 if prev_task.interleavable:
 
                     return
-                #overlap
+                # overlap
                 else:
 
                     return
             prev_task = cur_task
+
+        print([o.dump() for o in full_objset])
         return full_objset
 
     def get_target(self, objset):

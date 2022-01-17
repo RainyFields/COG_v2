@@ -62,7 +62,8 @@ class GoShapeTemporal(TemporalTask):
         self._operator = tg.Go(objs1)
 
         ### todo: make it simple and consistent with others
-        self.n_frames = const.LASTMAP[when1]
+        self.n_frames = const.LASTMAP[when1]+1
+        print(self.n_frames)
 
     @property
     def instance_size(self):
@@ -72,6 +73,8 @@ class GoShapeTemporalComposite(tg.TemporalCompositeTask):
     def __init__(self, n_tasks):
         tasks = [GoShapeTemporal() for i in range(n_tasks)]
         super(GoShapeTemporalComposite, self).__init__(tasks)
+        self.n_frames = sum([task.n_frames for task in tasks])
+        print([task.n_frames for task in tasks],self.n_frames)
 
 
 task_family_dict = OrderedDict([

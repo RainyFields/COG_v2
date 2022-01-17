@@ -102,8 +102,9 @@ def generate_example(max_memory, max_distractors, task_family):
 def generate_temporal_example(max_memory, max_distractors, n_tasks):
     ###TODO: change n_tasks based on max_memory
     task = task_bank.GoShapeTemporalComposite(n_tasks)
-    epochs = n_tasks * 4
+    epochs = task.n_frames
     avg_mem = round(max_memory / 3.0 + 0.01, 2)
+
 
     if max_distractors == 0:
         objset = task.generate_objset(n_epoch=epochs,
@@ -154,7 +155,7 @@ def main(argv):
     # print("objset", objset)
     # print("task", task)
 
-    example, objset, task = generate_temporal_example(max_memory,max_distractors,1)
+    example, objset, task = generate_temporal_example(max_memory,max_distractors,3)
 
 
 if __name__ == '__main__':
