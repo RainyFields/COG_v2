@@ -107,6 +107,3 @@ class TaskInfoConvert(object):
     def frame_update(self):
         pass
         # todo: insert/delete frames upon request
-
-
-
