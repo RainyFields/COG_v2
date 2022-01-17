@@ -1,6 +1,5 @@
 import numpy as np
 
-
 class TaskInfoConvert(object):
     """Base class for frame_info"""
 
@@ -24,11 +23,11 @@ class TaskInfoConvert(object):
         for i in range(self.n_epochs):
             self.frame_info.append({})
             self.frame_info[i]["frame_index"] = i
-            self.frame_info[i]["relative_tasks"] = [0]  # refering to the first task in self.task_info
+            self.frame_info[i]["relative_tasks"] = [0] # refering to the first task in self.task_info
             self.frame_info[i]["relative_task_epoch_idx"] = []
-            while len(self.frame_info[i]["relative_task_epoch_idx"]) + 1 != len(self.frame_info[i]["relative_tasks"]):
+            while len(self.frame_info[i]["relative_task_epoch_idx"])+1 != len(self.frame_info[i]["relative_tasks"]):
                 self.frame_info[i]["relative_task_epoch_idx"].append([])
-            self.frame_info[i]["relative_task_epoch_idx"][0] = i  # referring to the ith epoch in task 0
+            self.frame_info[i]["relative_task_epoch_idx"][0] = i # referring to the ith epoch in task 0
 
             # iterate over task_example["objects"] and check epochs to determine whether that eq current i
             self.frame_info[i]["objs"] = []
@@ -52,7 +51,7 @@ class TaskInfoConvert(object):
                 if i == 0:
                     self.frame_info[i]["description"].append("start of task %d" % 0)
 
-            self.frame_info[i]["is_sharable"] = False  # todo: random assign (might need to follow predefined schedule)
+            self.frame_info[i]["is_sharable"] = False # todo: random assign (might need to follow predefined schedule)
             self.frame_info[i]["is_intact"] = False
             for index in self.frame_info[i]["relative_tasks"]:
                 task = self.task_info[index]
@@ -75,11 +74,11 @@ class TaskInfoConvert(object):
             examples.append[{}]
             examples[i]["family"] = self.task_info[i]["task_family"]
             examples[i]["epochs"] = self.task_info[i]["task_len"]
-            examples[i]["question"] = self.task_info[i]["question"]
+            examples[i]["question"]= self.task_info[i]["question"]
             examples[i]["answers"] = self.task_info[i]["answers"]
             examples[i]["is_intact"] = self.task_info[i]["is_intact"]
 
-            inv_frame_index = []  # frame index if involved in task i
+            inv_frame_index = [] # frame index if involved in task i
             objects_feat = []
             objects = []
             curr_obj = {}
@@ -108,3 +107,6 @@ class TaskInfoConvert(object):
     def frame_update(self):
         pass
         # todo: insert/delete frames upon request
+
+
+
