@@ -400,7 +400,7 @@ class ObjectSet(object):
           epoch_now,
           add_if_exist=False,
           delete_if_can=True):
-    """Add an object.
+    """Add an object at the current epoch
 
     This function will attempt to add the obj if possible.
     It will not only add the object to the objset, but also instantiate the

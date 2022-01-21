@@ -28,6 +28,7 @@ import random
 
 from cognitive import constants as const
 from cognitive import stim_generator as sg
+from cognitive import convert as conv
 
 
 def obj_str(loc=None, color=None, shape=None,
@@ -238,13 +239,21 @@ class Task(object):
 
 
 class TemporalTask(Task):
-    def __init__(self, operator=None, locked=False, interleavable=False):
+    @property
+    def instance_size(self):
+        pass
+
+    def __init__(self, operator=None, is_intact=False, shareable=False):
         super(TemporalTask, self).__init__(operator)
-        self.locked = locked
-        self.interleavable = interleavable
+        self.is_intact = is_intact
+        self.shareable = shareable
 
 
 class TemporalCompositeTask(Task):
+    @property
+    def instance_size(self):
+        pass
+
     def __init__(self, tasks):
         self.tasks = tasks
 
@@ -263,48 +272,39 @@ class TemporalCompositeTask(Task):
 
     def generate_objset(self, n_epoch, n_distractor=0, average_memory_span=2):
         '''
-        :param n_epoch: total number of epochs
+
+        :param n_epoch: total number of epochs, doesn't really matter as an argument
         :param n_distractor: n_distractors is same for all tasks
         :param average_memory_span: same for all tasks
         :return: objset
         '''
-        n_epoch_per = int(n_epoch / len(self.tasks))
         n_max_backtrack = int(average_memory_span * 3)  ### why do this convertion? waste of time?
         full_objset = sg.ObjectSet(n_epoch=n_epoch, n_max_backtrack=n_max_backtrack)
 
-
-        ###TODO(mbai): what to do with different types of composite tasks?
-        ###TODO(mbai): make frame_info, convert task flag info to frames_info
-        ###TODO(mbai): change tg.select for checking visual stimuli conflicts
-        assert all(isinstance(task,TemporalTask) for task in self.tasks)
+        # TODO(mbai): make frame_info, convert task flag info to frames_info
+        # TODO(mbai): change tg.select for checking visual stimuli conflicts
+        assert all(isinstance(task, TemporalTask) for task in self.tasks)
         print(', '.join([str(task) for task in self.tasks]))
-        prev_task = self.tasks[0]
-        objset = prev_task.generate_objset(n_epoch_per, n_distractor, average_memory_span)
-        for obj in objset:
-            full_objset.add(obj,n_epoch_per-1)
-        for i,cur_task in enumerate(self.tasks[1:]):
+
+        # init full_task_info
+        first_task = self.tasks[0]
+        objset = first_task.generate_objset(first_task.n_frames, n_distractor, average_memory_span)
+        epoch_now = first_task.n_frames - 1
+        # TODO(mbai): fix taskinfoconvert
+        full_task_info = conv.TaskInfoConvert(task=first_task, objset=objset)
+
+        for i, cur_task in enumerate(self.tasks[1:]):
             ###TODO(mbai): identify task when
+            n_epoch_cur = cur_task.n_frames
+            epoch_now += n_epoch_cur
+            cur_objset = cur_task.generate_objset(n_epoch_cur, n_distractor, average_memory_span)
+            not_merged = True
+            while not_merged:
+                # change task instruction
+                cur_task_info = conv.TaskInfoConvert(cur_task,cur_objset)
+                not_merged = full_task_info.merge(cur_task_info)
 
-            epoch_now = (i+2)*n_epoch_per-1
-            cur_objset = cur_task.generate_objset(n_epoch_per, n_distractor, average_memory_span)
-            print(i)
-            #queue tasks
-            if prev_task.locked:
-                for obj in cur_objset:
-                    full_objset.add(obj,epoch_now)
-                print([o.dump() for o in full_objset])
-            #overlap or interleave tasks
-            else:
-                #interleave
-                if prev_task.interleavable:
-
-                    return
-                #overlap
-                else:
-
-                    return
-            prev_task = cur_task
-        return full_objset
+        return full_task_info
 
     def get_target(self, objset):
         raise NotImplementedError()

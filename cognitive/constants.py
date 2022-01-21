@@ -27,7 +27,7 @@ MAX_MEMORY = 4
 LASTMAP = {}
 for k in range(MAX_MEMORY+1):
     LASTMAP["last%d"%(k)] = k
-# print(LASTMAP)
+print(LASTMAP)
 
 ALLWHENS = []
 for k in range(MAX_MEMORY+1):
