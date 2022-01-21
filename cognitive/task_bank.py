@@ -55,7 +55,7 @@ class GoShapeTemporal(TemporalTask):
     """Go to shape X."""
 
     def __init__(self):
-        super(GoShapeTemporal, self).__init__(locked=True)
+        super(GoShapeTemporal, self).__init__(is_intact=True)
         shape1 = sg.random_shape()
         when1 = sg.random_when()
         objs1 = tg.Select(shape=shape1, when=when1)
@@ -63,8 +63,6 @@ class GoShapeTemporal(TemporalTask):
 
         ### todo: make it simple and consistent with others
         self.n_frames = const.LASTMAP[when1]+1
-        print(self.n_frames)
-
     @property
     def instance_size(self):
         return sg.n_random_shape() * sg.n_random_when()
@@ -74,8 +72,6 @@ class GoShapeTemporalComposite(tg.TemporalCompositeTask):
         tasks = [GoShapeTemporal() for i in range(n_tasks)]
         super(GoShapeTemporalComposite, self).__init__(tasks)
         self.n_frames = sum([task.n_frames for task in tasks])
-        print([task.n_frames for task in tasks],self.n_frames)
-
 
 task_family_dict = OrderedDict([
     ('GoShape', GoShape),

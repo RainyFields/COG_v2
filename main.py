@@ -150,12 +150,12 @@ def main(argv):
 
     example, objset, task = generate_example(max_memory, max_distractors, task_family)
     frameinfo = TaskInfoConvert(example)
-    # print(frameinfo)
-    # print("example", example)
-    # print("objset", objset)
-    # print("task", task)
+    print(frameinfo)
+    print("example", example)
+    print("objset", objset)
+    print("task", task)
 
-    # example, objset, task = generate_temporal_example(max_memory,max_distractors,1)
+    example, objset, task = generate_temporal_example(max_memory,max_distractors,1)
 
 
 if __name__ == '__main__':
