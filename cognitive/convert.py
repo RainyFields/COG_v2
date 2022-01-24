@@ -14,7 +14,6 @@ def get_target_value(t):
         return 'false'
     return t
 
-
 class TaskInfoConvert(object):
     """Base class for frame_info"""
 
@@ -69,8 +68,7 @@ class TaskInfoConvert(object):
                         if i == 0:
                             self.frame_info[i]["description"].append("start of task %d" % 0)
 
-                    self.frame_info[i][
-                        "is_sharable"] = False  # todo: random assign (might need to follow predefined schedule)
+                    self.frame_info[i]["is_sharable"] = False  # todo: random assign (might need to follow predefined schedule)
                     self.frame_info[i]["is_intact"] = False
                     for index in self.frame_info[i]["relative_tasks"]:
                         task = self.task_info[index]
@@ -123,8 +121,7 @@ class TaskInfoConvert(object):
                     if i == 0:
                         self.frame_info[i]["description"].append("start of task %d" % 0)
 
-                self.frame_info[i][
-                    "is_sharable"] = False  # todo: random assign (might need to follow predefined schedule)
+                self.frame_info[i]["is_sharable"] = False  # todo: random assign (might need to follow predefined schedule)
                 self.frame_info[i]["is_intact"] = False
                 for index in self.frame_info[i]["relative_tasks"]:
                     task = self.task_info[index]
