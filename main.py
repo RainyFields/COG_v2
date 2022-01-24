@@ -100,31 +100,28 @@ def generate_example(max_memory, max_distractors, task_family):
 
 
 def generate_temporal_example(max_memory, max_distractors, n_tasks):
-    ###TODO: change n_tasks based on max_memory
-    task = task_bank.GoShapeTemporalComposite(n_tasks)
-    epochs = task.n_frames
-    avg_mem = round(max_memory / 3.0 + 0.01, 2)
 
+    # sample n_tasks
+    families = list(task_bank.task_family_dict.keys())
 
-    if max_distractors == 0:
-        objset = task.generate_objset(n_epoch=epochs,
-                                      average_memory_span=avg_mem)
-    else:
-        objset = task.generate_objset(n_epoch=epochs,
-                                      n_distractor=random.randint(1, max_distractors),
-                                      average_memory_span=avg_mem)
+    task_examples = []
+    task_objsets = []
+    task_list = []
+    for i in range(n_tasks):
+        example, objset, task = generate_example(max_memory, max_distractors, families)
+        task_examples.append(example)
+        task_objsets.append(objset)
+        task_list.append(task)
 
-    targets = task.get_target(objset)
+    # temporal combination
+    combo_frames = None
+    for i, task in enumerate(task_list):
+        example_current_task= task_examples[i]
+        if combo_frames == None:
+            combo_frames = TaskInfoConvert(example_current_task)
+        combo_frames = combo_frames.merge(example_current_task)
 
-    example = {
-        'family': 'GoShape Temporal Composite',
-        'epochs': 4,  # saving an epoch explicitly is needed because
-        # there might be no objects in the last epoch.
-        'question': str(task),
-        'objects': [o.dump() for o in objset],
-        'answers': [get_target_value(t) for t in targets]
-    }
-    return
+    return combo_frames
 
 
 def log_exceptions(func):
@@ -148,15 +145,15 @@ def main(argv):
     families = list(task_bank.task_family_dict.keys())
     task_family = families[0]
 
-    example, objset, task = generate_example(max_memory, max_distractors, task_family)
-    frameinfo = TaskInfoConvert(example)
-    print(frameinfo)
-    print("example", example)
-    print("objset", objset)
-    print("task", task)
+    # example, objset, task = generate_example(max_memory, max_distractors, task_family)
+    # frameinfo = TaskInfoConvert(example)
+    # print(frameinfo)
+    # print("example", example)
+    # print("objset", objset)
+    # print("task", task)
 
-    example, objset, task = generate_temporal_example(max_memory,max_distractors,1)
-
+    combo_frames = generate_temporal_example(max_memory,max_distractors,1)
+    print(combo_frames)
 
 if __name__ == '__main__':
     tf.app.run(main)
