@@ -243,9 +243,8 @@ class TemporalTask(Task):
     def instance_size(self):
         pass
 
-    def __init__(self, operator=None, is_intact=False, shareable=False):
+    def __init__(self, operator=None, shareable=False):
         super(TemporalTask, self).__init__(operator)
-        self.is_intact = is_intact
         self.shareable = shareable
 
 
