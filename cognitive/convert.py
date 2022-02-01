@@ -84,20 +84,21 @@ class TaskInfoConvert(object):
         # return epoch index for given frame index and task index
         return self.frame_info[frame_idx]["relative_task_epoch_idx"][task_idx][0]
 
-    def merge(self, new_task_info, reuse):
+    def merge(self, new_task_info, reuse=None):
         '''
 
         :param new_task_info: TaskInfoConvert object
-        :return: None if merge successful, and the new task if unsuccessful
+        :return: None if no change, and the new task if merge needed change
         '''
         # TODO(mbai): change task instruction here
-        # TODO(mbai): frame_info class
-        # TODO(mbai): add a flag for pure overlap, not adding new objs
         # TODO: location conflict, feature (shape, color) conflict
 
         assert isinstance(new_task_info, TaskInfoConvert)
         if len(new_task_info.task_info) > 1:
             raise NotImplementedError('Currently cannot support adding new composite tasks')
+
+        if reuse is None:
+            reuse = 0.5
 
         # correct task index in new_task_info
         next_task_idx = len(self.task_info)
@@ -107,23 +108,22 @@ class TaskInfoConvert(object):
                 frame.relative_task_epoch_idx[next_task_idx + i] = frame.relative_task_epoch_idx[task].pop()
                 task = next_task_idx + i
 
+        start = self.frame_info.get_start_frame()
+
         # reuse visual stimuli with probability reuse
         if np.random.random() < reuse:
-            self.add_new_frame({next_task_idx}, new_task_info)
-            # what happens if no visual stimuli on the first
-            # shareable frame?
+            # reuse past info, and resolve conflict
+            resolved = False
+            while not resolved:
 
         # create new frames and merge
         else:
             # find the first consecutively shareable frame
-            start = self.frame_info.first_shareable
             # add more frames or change lastk? add more frames for now
             if start == -1:
                 # queue
                 extra_f = len(new_task_info.frame_info)
             else:
-                if new_task_info.n_epochs > self.n_epochs:
-                    raise NotImplementedError('new task is longer than the existing task')
                 extra_f = new_task_info.n_epochs - self.n_epochs - start
 
             for i in range(extra_f):
