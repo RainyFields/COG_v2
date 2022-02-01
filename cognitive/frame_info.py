@@ -1,5 +1,5 @@
 import stim_generator as sg
-
+import numpy as np
 
 class FrameInfo(object):
     def __init__(self, n_epochs, relative_tasks, shareable, task_question, task_answers, objset=None):
@@ -14,9 +14,12 @@ class FrameInfo(object):
         :param objset: objset related to the task
         """
         # TODO: first beginning shareable flag
+        # TODO: define p for each frame? if not shareable, then p=0
+        # within shareables, p is initialized as uniform
         assert len(relative_tasks) == 1
 
         self.frame_list = []
+
         self.n_epochs = n_epochs
         if shareable:
             self.first_shareable = 0
@@ -33,13 +36,14 @@ class FrameInfo(object):
                     self.frame_list.append(self.Frame(i, shareable, relative_tasks, description, None))
 
         if objset:
-            # TODO(mbai): change object epoch?
             for obj in objset:
                 if obj.epoch[0] + 1 == self.epoch[1]:
                     self.frame_list[obj.epoch[0]].objs.add(obj)
                 else:
                     for epoch in range(obj.epoch[0], obj.epoch[1]):
                         self.frame_list[epoch].objs.add(obj)
+
+        self.p = np.zeros(len(self.frame_list))
 
     def __len__(self):
         return len(self.frame_list)
@@ -49,6 +53,9 @@ class FrameInfo(object):
 
     def __getitem__(self, item):
         return self.frame_list.__getitem__(item)
+
+    def get_start_frame(self):
+        return np.random.choice(self.frame_list,self.p)
 
     @property
     def first_shareable(self):
@@ -82,6 +89,8 @@ class FrameInfo(object):
             self.description = self.description + new_frame.description
             self.action = self.action + new_frame.action
 
+            # TODO(mbai): change object epoch?
+            # TODO(mbai): resolve conflict
             self.objs = self.objs | new_frame.objs
             temp = self.relative_task_epoch_idx.copy()
             temp.update(new_frame.relative_task_epoch_idx)

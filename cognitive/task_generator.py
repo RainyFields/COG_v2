@@ -300,8 +300,9 @@ class TemporalCompositeTask(Task):
             not_merged = True
             while not_merged:
                 # change task instruction
+                # if not first loop, then reuse set to 1 or something
                 cur_task_info = conv.TaskInfoConvert(cur_task,cur_objset)
-                not_merged = full_task_info.merge(cur_task_info)
+                if full_task_info.merge(cur_task_info)
 
         return full_task_info
 
