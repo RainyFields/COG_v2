@@ -4,7 +4,7 @@ import numpy as np
 import task_generator as tg
 import stim_generator as sg
 import frame_info as fi
-
+from combo_task_info import ComboTaskInfo
 
 def get_target_value(t):
     # Convert target t to string and convert True/False target values
@@ -84,7 +84,7 @@ class TaskInfoConvert(object):
         # return epoch index for given frame index and task index
         return self.frame_info[frame_idx]["relative_task_epoch_idx"][task_idx][0]
 
-    def merge(self, new_task_info, reuse=None):
+    def merge(self, new_task_info = ComboTaskInfo(), reuse=None):
         '''
 
         :param new_task_info: TaskInfoConvert object
@@ -120,50 +120,74 @@ class TaskInfoConvert(object):
             self.add_new_frame({next_task_idx}, new_task_info)
 
         curr_abs_idx = start
-        # for i, curr_frame in enumerate(self.frame_info[start:]):
-        #     if curr_frame.objs is empty or new_task_info.frame_info[i].objs is empty:
-        #         self.frame_info[i].compatible_merge(new_task_info.frame_info[i]) # always update frame descriptions
-        #     else:
-        #         if np.random.random() < reuse: # use previous frame info and reinit new task
-        #
-        #             attr_expected_in = list()
-        #             for attr_type in ['loc', 'color', 'shape']:
-        #                 a = getattr(self, attr_type)
-        #                 if isinstance(a, Operator):pass
-        #
-        #
-        #     curr_abs_idx += 1
-        # reuse visual stimuli with probability reuse
-        if np.random.random() < reuse:
-            # reuse past info, and resolve conflict
-            for i, curr_frame in enumerate(self.frame_info[start:]):
-                if new_task_info.frame_info[i].objs != curr_frame.objs: # subset
-                    # identify which select operator for this frame: add self.track_op in the GoShape task
-                    ### todo: move it to the Task Class as a general attribute?
-                    ### todo: what is the task here? I need to get access to the operator so suppose we have the initialized task
-                    # current select operator is new_task_info.task.track_op[i]
-                    # update the associate select operator with curr_frame.objs information, if multiple, choose one
-                    new_task_info.task.track_op[i].update(curr_frame.objs)
-            ####### after this loop, new task with updated info should be compatible with the previous one
-
-            ### todo: self.compatible_merge()
-            return self.compatible_merge(new_task_info, add_stim = False) # compatible merge means merge two task without adding new stims
-
-        # create new frames and merge
-        else:
-            # find the first consecutively shareable frame
-            # add more frames or change lastk? add more frames for now
-            if start == -1:
-                # queue
-                extra_f = len(new_task_info.frame_info)
+        for i, curr_frame in enumerate(self.frame_info[start:]):
+            ### todo: define empty; what is curr_frame.objs?!!!!
+            if curr_frame.objs is empty or new_task_info.frame_info[i].objs is empty:
+                self.frame_info[i].compatible_merge(new_task_info.frame_info[i]) # always update frame descriptions
             else:
-                extra_f = new_task_info.n_epochs - self.n_epochs - start
+                if np.random.random() < reuse: # use previous frame info and reinit new task
+                    # identify select operator associated with the new_task
+                    incoming_select_op = new_task_info.task.track_op[i].update(curr_frame.objs)
+                    attr_expected = dict()
+                    attr_expected["sel_op_idx"] = i
+                    for attr_type in incoming_select_op.inherent_attr:
+                        a = incoming_select_op.getattr(attr_type)
+                        if isinstance(a, Operator): pass
+                        else: attr_expected[attr_type] = a
+                    # attr_expected: dictionary with restrictions on current select operator
+                    # update task with attr_expected
+                    new_task_info.task.update(attr_expected[attr_type])
+                    new_task_info.objset = new_task_info.task.generate_objset(n_epoch=new_task_info.task.n_frames, average_memory_span=new_task_info.task.avg_mem_span)
+                    new_task_info.example["question"] = str(new_task_info.task)
+                    new_task_info.example["objects"] = [o.dump() for o in new_task_info.objset]
+                    targets = new_task_info.task.get_target(objset)
+                    new_task_info.example["answers"] = [get_target_value(t) for t in targets]
+                    #### xlei: do we still need compatible merge since the new task will use the information from the previous one?
+                    #### xlei: yes! we need to update all the index and task descriptions
+                    #### xlei: or maybe we have done it already?
+                else:
+                    ## xlei: compatible merge use add function to add objects to the previous frame
+                    ## xlei: don't forget to update frameinfo and objset(this one should have been updated in the add process)
+                    ## xlei: so only merge frameinfo
+                    self.compatible_merge(new_task_info.frame_info[i])
 
-            for i in range(extra_f):
-                self.add_new_frame({next_task_idx}, new_task_info)
 
-            for old, new in zip(self.frame_info[start, len(self.frame_info)], new_task_info.frame_info):
-                old.merge(new)
+
+
+            curr_abs_idx += 1
+        # reuse visual stimuli with probability reuse
+
+        ########## delete below
+        # if np.random.random() < reuse:
+        #     # reuse past info, and resolve conflict
+        #     for i, curr_frame in enumerate(self.frame_info[start:]):
+        #         if new_task_info.frame_info[i].objs != curr_frame.objs: # subset
+        #             # identify which select operator for this frame: add self.track_op in the GoShape task
+        #             ### todo: move it to the Task Class as a general attribute?
+        #             ### todo: what is the task here? I need to get access to the operator so suppose we have the initialized task
+        #             # current select operator is new_task_info.task.track_op[i]
+        #             # update the associate select operator with curr_frame.objs information, if multiple, choose one
+        #             new_task_info.task.track_op[i].update(curr_frame.objs)
+        #     ####### after this loop, new task with updated info should be compatible with the previous one
+        #
+        #     ### todo: self.compatible_merge()
+        #     return self.compatible_merge(new_task_info, add_stim = False) # compatible merge means merge two task without adding new stims
+        #
+        # # create new frames and merge
+        # else:
+        #     # find the first consecutively shareable frame
+        #     # add more frames or change lastk? add more frames for now
+        #     if start == -1:
+        #         # queue
+        #         extra_f = len(new_task_info.frame_info)
+        #     else:
+        #         extra_f = new_task_info.n_epochs - self.n_epochs - start
+        #
+        #     for i in range(extra_f):
+        #         self.add_new_frame({next_task_idx}, new_task_info)
+        #
+        #     for old, new in zip(self.frame_info[start, len(self.frame_info)], new_task_info.frame_info):
+        #         old.merge(new)
 
         self.task_info.append(new_task_info.task_info[0])
         return

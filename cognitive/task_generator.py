@@ -208,6 +208,7 @@ class Task(object):
         Returns:
           objset: full objset for all n_epoch
         """
+        self.avg_mem_span = average_memory_span
         n_max_backtrack = int(average_memory_span * 3)  ### why do this convertion? waste of time?
         objset = sg.ObjectSet(n_epoch=n_epoch, n_max_backtrack=n_max_backtrack)
 

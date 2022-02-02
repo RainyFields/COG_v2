@@ -37,7 +37,7 @@ from cognitive import stim_generator as sg
 import cognitive.task_bank as task_bank
 from cognitive import task_generator as tg
 from cognitive.convert import TaskInfoConvert
-
+from cognitive.combo_task_info import ComboTaskInfo
 FLAGS = tf.flags.FLAGS
 
 tf.flags.DEFINE_integer('max_memory', 3, 'maximum memory duration')
@@ -97,7 +97,9 @@ def generate_example(max_memory, max_distractors, task_family):
         'objects': [o.dump() for o in objset],
         'answers': [get_target_value(t) for t in targets]
     }
-    return example, objset, task
+    frame_info = TaskInfoConvert(example)
+    combo_task_info = ComboTaskInfo(example=example, objset = objset, task = task, frameinfo = frame_info)
+    return combo_task_info
 
 
 def generate_temporal_example(max_memory, max_distractors, n_tasks):
@@ -105,21 +107,18 @@ def generate_temporal_example(max_memory, max_distractors, n_tasks):
     # sample n_tasks
     families = list(task_bank.task_family_dict.keys())
 
-    task_examples = []
-    task_objsets = []
-    task_list = []
+    combo_task_list = []
     for i in range(n_tasks):
-        example, objset, task = generate_example(max_memory, max_distractors, families)
-        task_examples.append(example)
-        task_objsets.append(objset)
-        task_list.append(task)
+        combo_task_info = generate_example(max_memory, max_distractors, families)
+        combo_task_list.append(combo_task_info)
+
 
     # temporal combination
     combo_frames = None
-    for i, task in enumerate(task_list):
-        example_current_task= task_examples[i]
+    for i, task in enumerate(combo_task_list):
+        example_current_task= combo_task_list[i]
         if combo_frames == None:
-            combo_frames = TaskInfoConvert(example_current_task)
+            combo_frames = example_current_task.frameinfo
         combo_frames = combo_frames.merge(example_current_task)
 
     return combo_frames
