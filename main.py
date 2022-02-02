@@ -145,8 +145,8 @@ def main(argv):
     families = list(task_bank.task_family_dict.keys())
 
     # test for single task, conversion etc
-    example, objset, task = generate_example(max_memory, max_distractors, families)
-    frameinfo = TaskInfoConvert(example)
+    combotask_info = generate_example(max_memory, max_distractors, families)
+    frameinfo = TaskInfoConvert(combotask_info.example)
 
     print(frameinfo)
     # print("example", example)
