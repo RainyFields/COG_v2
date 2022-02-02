@@ -397,6 +397,16 @@ class ObjectSet(object):
     def __len__(self):
         return len(self.set)
 
+    def increase_epoch(self, new_n_epoch):
+        '''
+        increase the number of epochs of the objset
+        :param n_epoch: new number of epochs
+        :return:
+        '''
+        for i in range(new_n_epoch - self.n_epoch):
+            self.dict[self.n_epoch+i]
+        self.n_epoch = new_n_epoch
+
     def add(self,
             obj,
             epoch_now,

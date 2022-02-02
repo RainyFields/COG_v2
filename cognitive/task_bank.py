@@ -14,7 +14,7 @@
 # ==============================================================================
 
 """A bank of available tasks."""
-
+# TODO: n_epochs
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -32,6 +32,21 @@ from cognitive import constants as const
 FLAGS = tf.app.flags.FLAGS
 
 tf.app.flags.DEFINE_string('task_family', 'all', 'name of the task to be trained')
+
+class ExistShapeOf(Task):
+  """Check if exist object with shape of a colored object."""
+
+  def __init__(self):
+    color1, color2 = sg.sample_color(2)
+    objs1 = tg.Select(color=color1, when=sg.random_when())
+    shape1 = tg.GetShape(objs1)
+    objs2 = tg.Select(color=color2, shape=shape1, when='now')
+    self._operator = tg.Exist(objs2)
+    self.n_frames = 4
+
+  @property
+  def instance_size(self):
+    return sg.n_sample_color(2) * sg.n_random_when()
 
 
 class GoShape(Task):
@@ -98,6 +113,7 @@ class GoShapeTemporalComposite(tg.TemporalCompositeTask):
 
 task_family_dict = OrderedDict([
     ('GoShape', GoShape),
+    ('ExistShapeOf',ExistShapeOf)
 ])
 
 
