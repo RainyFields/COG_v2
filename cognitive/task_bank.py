@@ -42,6 +42,8 @@ class GoShape(Task):
         shape1 = sg.random_shape()
         when1 = sg.random_when()
         objs1 = tg.Select(shape=shape1, when=when1)
+        #### define inherent attributes
+
         ### shape
         self.select_op.append(objs1)
 
@@ -55,10 +57,15 @@ class GoShape(Task):
         for slt_op in self.select_op:
             self.track_op[self.n_frames - 1 - const.ALLWHENS.index(slt_op.when)] = slt_op
 
-    def reinit(self, select_op_index, restrictions):
-        # copy and update operators
+    def update(self, attr_expected):
+        # update operators
+        # get associated epoch #### ? epoch or frame? should be epoch
+        epoch_idx = attr_expected["sel_op_idx"]
+        # does it really update the original operator?
+        # todo: delete epoch_idx
+        self.track_op[epoch_idx] = tg.Select(attr_expected) # how to pass several parameters
         pass
-        # retrun GoShape(select_op_set)
+
 
     @property
     def instance_size(self):

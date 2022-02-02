@@ -136,7 +136,7 @@ class TaskInfoConvert(object):
                         else: attr_expected[attr_type] = a
                     # attr_expected: dictionary with restrictions on current select operator
                     # update task with attr_expected
-                    new_task_info.task.update(attr_expected[attr_type])
+                    new_task_info.task.update(attr_expected)
                     new_task_info.objset = new_task_info.task.generate_objset(n_epoch=new_task_info.task.n_frames, average_memory_span=new_task_info.task.avg_mem_span)
                     new_task_info.example["question"] = str(new_task_info.task)
                     new_task_info.example["objects"] = [o.dump() for o in new_task_info.objset]
