@@ -393,6 +393,10 @@ class Select(Operator):
 
         return subset
 
+    def single_op_update(self, new_obj):
+        # update the select operator while keeping the previous operator intact
+        # update new_task response
+
     def get_expected_input(self, should_be, objset, epoch_now):
         """Guess objset for Select operator.
 

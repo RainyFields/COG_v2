@@ -37,18 +37,32 @@ tf.app.flags.DEFINE_string('task_family', 'all', 'name of the task to be trained
 class GoShape(Task):
     """Go to shape X."""
 
-    def __init__(self):
+    def __init__(self, select_op_set = None):
+        self.select_op = []
         shape1 = sg.random_shape()
         when1 = sg.random_when()
         objs1 = tg.Select(shape=shape1, when=when1)
+        ### shape
+        self.select_op.append(objs1)
+
         self._operator = tg.Go(objs1)
 
         ### todo: make it simple and consistent with others
         self.n_frames = const.LASTMAP[when1]+1
 
+        # backtrack operator based on epoch index
+        self.track_op = {}
+        for slt_op in self.select_op:
+            self.track_op[self.n_frames - 1 - const.ALLWHENS.index(slt_op.when)] = slt_op
+
+    def reinit(self, select_op_index, restrictions):
+        # copy and update operators
+        retrun GoShape(select_op_set)
+
     @property
     def instance_size(self):
         return sg.n_random_shape() * sg.n_random_when()
+
 
 
 class GoShapeTemporal(TemporalTask):

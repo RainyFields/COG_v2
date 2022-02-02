@@ -35,6 +35,7 @@ for k in range(MAX_MEMORY+1):
 ALLWHENS_PROB = [1/(MAX_MEMORY+1)] * len(ALLWHENS)
 
 
+
 # RGB, from https://sashat.me/2017/01/11/list-of-20-simple-distinct-colors/
 WORD2COLOR = {
     'red': (230, 25, 75),
