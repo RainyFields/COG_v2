@@ -72,6 +72,7 @@ def get_target_value(t):
 
 def generate_example(max_memory, max_distractors, task_family):
     # random.seed(1)
+
     task = task_bank.random_task(task_family)
     epochs = task.n_frames
 
@@ -143,17 +144,19 @@ def main(argv):
     max_distractors = 0
     max_memory = 10
     families = list(task_bank.task_family_dict.keys())
-    task_family = families[0]
 
-    # example, objset, task = generate_example(max_memory, max_distractors, task_family)
-    # frameinfo = TaskInfoConvert(example)
-    # print(frameinfo)
+    # test for single task, conversion etc
+    example, objset, task = generate_example(max_memory, max_distractors, families)
+    frameinfo = TaskInfoConvert(example)
+
+    print(frameinfo)
     # print("example", example)
     # print("objset", objset)
     # print("task", task)
 
-    combo_frames = generate_temporal_example(max_memory,max_distractors,1)
-    print(combo_frames)
+    # test for temporal composition
+    # combo_frames = generate_temporal_example(max_memory,max_distractors,1)
+    # print(combo_frames)
 
 if __name__ == '__main__':
     tf.app.run(main)

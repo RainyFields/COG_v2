@@ -57,7 +57,8 @@ class GoShape(Task):
 
     def reinit(self, select_op_index, restrictions):
         # copy and update operators
-        retrun GoShape(select_op_set)
+        pass
+        # retrun GoShape(select_op_set)
 
     @property
     def instance_size(self):
@@ -95,4 +96,4 @@ task_family_dict = OrderedDict([
 
 def random_task(task_family):
     """Return a random question from the task family."""
-    return task_family_dict[task_family]()
+    return task_family_dict[task_family[random.randint(0,len(task_family)-1)]]()

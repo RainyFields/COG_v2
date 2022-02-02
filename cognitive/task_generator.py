@@ -302,7 +302,8 @@ class TemporalCompositeTask(Task):
                 # change task instruction
                 # if not first loop, then reuse set to 1 or something
                 cur_task_info = conv.TaskInfoConvert(cur_task,cur_objset)
-                if full_task_info.merge(cur_task_info)
+                if full_task_info.merge(cur_task_info):
+                    pass
 
         return full_task_info
 
@@ -394,6 +395,7 @@ class Select(Operator):
         return subset
 
     def single_op_update(self, new_obj):
+        pass
         # update the select operator while keeping the previous operator intact
         # update new_task response
 

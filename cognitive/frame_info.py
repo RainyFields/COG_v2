@@ -2,7 +2,7 @@ import stim_generator as sg
 import numpy as np
 
 class FrameInfo(object):
-    def __init__(self, n_epochs, relative_tasks, shareable, task_question, task_answers, objset=None):
+    def __init__(self, n_epochs, relative_tasks,  task_question, task_answers, objset=None, shareable = True):
         """
         used for combining multiple temporal tasks, initialize with 1 task
         stores each frame object in frame_list
@@ -17,6 +17,7 @@ class FrameInfo(object):
         # TODO: define p for each frame? if not shareable, then p=0
         # within shareables, p is initialized as uniform
         assert len(relative_tasks) == 1
+        self.objset = objset
 
         self.frame_list = []
 
@@ -57,16 +58,16 @@ class FrameInfo(object):
     def get_start_frame(self):
         return np.random.choice(self.frame_list,self.p)
 
-    @property
-    def first_shareable(self):
-        if self.first_shareable == -1:
-            return self.first_shareable
-        assert self.first_shareable == next(i for i, frame in enumerate(self.frame_list) if frame.shareable)
-        return self.first_shareable
-
-    @first_shareable.setter
-    def first_shareable(self, idx):
-        self.first_shareable = idx
+    # @property
+    # def first_shareable(self):
+    #     if self.first_shareable == -1:
+    #         return self.first_shareable
+    #     assert self.first_shareable == next(i for i, frame in enumerate(self.frame_list) if frame.shareable)
+    #     return self.first_shareable
+    #
+    # @first_shareable.setter
+    # def first_shareable(self, idx = 0):
+    #     self.first_shareable = idx
 
     class Frame(object):
         """ frame object within frame_info list"""
