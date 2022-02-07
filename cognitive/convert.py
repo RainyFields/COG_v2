@@ -58,7 +58,7 @@ class TaskInfoConvert(object):
             assert isinstance(task, tg.TemporalTask)
 
             self.task_info = [{}]
-            self.task_info[0]['shareable'] = task.shareable
+            self.task_info[0]['first_shareable'] = task.first_shareable
             self.task_info[0]["task_family"] = task.__class__.__name__
             self.task_info[0]["question"] = str(task)
             self.task_info[0]["answers"] = [get_target_value(t) for t in task.get_target(objset)]

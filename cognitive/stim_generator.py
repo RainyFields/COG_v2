@@ -411,7 +411,9 @@ class ObjectSet(object):
             obj,
             epoch_now,
             add_if_exist=False,
-            delete_if_can=True):
+            delete_if_can=True,
+            merge_idx=None
+            ):
         """Add an object at the current epoch
 
         This function will attempt to add the obj if possible.
@@ -469,14 +471,16 @@ class ObjectSet(object):
             # If when is None, then object is always presented
             obj.epoch = [0, self.n_epoch]
         else:
-            try:
-                # TODO: update obj.epoch
-                obj.epoch = [epoch_now - const.LASTMAP[obj.when], epoch_now - const.LASTMAP[obj.when] + 1]
-                ### todo: check whether it needs a shift
-            except:
-                raise NotImplementedError(
-                    'When value: {:s} is not implemented'.format(str(obj.when)))
-
+            if merge_idx is None:
+                try:
+                    # TODO: update obj.epoch
+                    obj.epoch = [epoch_now - const.LASTMAP[obj.when], epoch_now - const.LASTMAP[obj.when] + 1]
+                    ### todo: check whether it needs a shift
+                except:
+                    raise NotImplementedError(
+                        'When value: {:s} is not implemented'.format(str(obj.when)))
+            else:
+                obj.epoch = [merge_idx,merge_idx+1]
         # Insert and maintain order
         i = bisect_left(self.end_epoch, obj.epoch[0])
         self.set.insert(i, obj)
