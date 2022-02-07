@@ -23,12 +23,11 @@ from __future__ import division
 from __future__ import print_function
 
 from collections import defaultdict
-import copy
+import numpy as np
 import random
 
 from cognitive import constants as const
 from cognitive import stim_generator as sg
-from cognitive import convert as conv
 
 
 def obj_str(loc=None, color=None, shape=None,
@@ -235,6 +234,7 @@ class Task(object):
         return objset
 
     def get_target(self, objset):
+
         # return [self(objset, epoch_now) for epoch_now in range(0,objset.n_epoch)]
         return [self(objset, objset.n_epoch - 1)]
 
@@ -244,9 +244,15 @@ class TemporalTask(Task):
     def instance_size(self):
         pass
 
-    def __init__(self, operator=None, shareable=False):
+    def __init__(self, n_frames, operator=None, first_shareable=None):
         super(TemporalTask, self).__init__(operator)
-        self.shareable = shareable
+        if first_shareable is None:
+            self.first_shareable = np.random.choice(np.arange(0, n_frames + 1))
+        else:
+            self.first_shareable = first_shareable
+        self.n_frames = n_frames
+
+
 
 
 class TemporalCompositeTask(Task):

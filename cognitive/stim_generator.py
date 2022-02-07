@@ -403,15 +403,17 @@ class ObjectSet(object):
         :param n_epoch: new number of epochs
         :return:
         '''
-        for i in range(new_n_epoch - self.n_epoch):
-            self.dict[self.n_epoch+i]
+        for i in range(self.n_epoch, new_n_epoch):
+            self.dict[i]
         self.n_epoch = new_n_epoch
 
     def add(self,
             obj,
             epoch_now,
             add_if_exist=False,
-            delete_if_can=True):
+            delete_if_can=True,
+            merge_idx=None
+            ):
         """Add an object at the current epoch
 
         This function will attempt to add the obj if possible.
@@ -469,13 +471,16 @@ class ObjectSet(object):
             # If when is None, then object is always presented
             obj.epoch = [0, self.n_epoch]
         else:
-            try:
-                obj.epoch = [epoch_now - const.LASTMAP[obj.when], epoch_now - const.LASTMAP[obj.when] + 1]
-                ### todo: check whether it needs a shift
-            except:
-                raise NotImplementedError(
-                    'When value: {:s} is not implemented'.format(str(obj.when)))
-
+            if merge_idx is None:
+                try:
+                    # TODO: update obj.epoch
+                    obj.epoch = [epoch_now - const.LASTMAP[obj.when], epoch_now - const.LASTMAP[obj.when] + 1]
+                    ### todo: check whether it needs a shift
+                except:
+                    raise NotImplementedError(
+                        'When value: {:s} is not implemented'.format(str(obj.when)))
+            else:
+                obj.epoch = [merge_idx,merge_idx+1]
         # Insert and maintain order
         i = bisect_left(self.end_epoch, obj.epoch[0])
         self.set.insert(i, obj)
