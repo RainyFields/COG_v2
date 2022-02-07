@@ -23,7 +23,7 @@ import itertools
 import string
 import numpy as np
 
-MAX_MEMORY = 4
+MAX_MEMORY = 3
 LASTMAP = {}
 for k in range(MAX_MEMORY+1):
     LASTMAP["last%d"%(k)] = k

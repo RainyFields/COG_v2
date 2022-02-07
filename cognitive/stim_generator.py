@@ -403,8 +403,8 @@ class ObjectSet(object):
         :param n_epoch: new number of epochs
         :return:
         '''
-        for i in range(new_n_epoch - self.n_epoch):
-            self.dict[self.n_epoch+i]
+        for i in range(self.n_epoch, new_n_epoch):
+            self.dict[i]
         self.n_epoch = new_n_epoch
 
     def add(self,
@@ -470,6 +470,7 @@ class ObjectSet(object):
             obj.epoch = [0, self.n_epoch]
         else:
             try:
+                # TODO: update obj.epoch
                 obj.epoch = [epoch_now - const.LASTMAP[obj.when], epoch_now - const.LASTMAP[obj.when] + 1]
                 ### todo: check whether it needs a shift
             except:

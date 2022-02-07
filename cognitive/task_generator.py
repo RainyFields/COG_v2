@@ -28,7 +28,6 @@ import random
 
 from cognitive import constants as const
 from cognitive import stim_generator as sg
-from cognitive import convert as conv
 
 
 def obj_str(loc=None, color=None, shape=None,
@@ -235,6 +234,7 @@ class Task(object):
         return objset
 
     def get_target(self, objset):
+
         # return [self(objset, epoch_now) for epoch_now in range(0,objset.n_epoch)]
         return [self(objset, objset.n_epoch - 1)]
 
@@ -244,9 +244,10 @@ class TemporalTask(Task):
     def instance_size(self):
         pass
 
-    def __init__(self, operator=None, shareable=False):
+    def __init__(self, n_frames, operator=None, shareable=False):
         super(TemporalTask, self).__init__(operator)
         self.shareable = shareable
+        self.n_frames = n_frames
 
 
 class TemporalCompositeTask(Task):

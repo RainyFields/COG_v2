@@ -33,26 +33,27 @@ FLAGS = tf.app.flags.FLAGS
 
 tf.app.flags.DEFINE_string('task_family', 'all', 'name of the task to be trained')
 
+
 class ExistShapeOf(Task):
-  """Check if exist object with shape of a colored object."""
+    """Check if exist object with shape of a colored object."""
 
-  def __init__(self):
-    color1, color2 = sg.sample_color(2)
-    objs1 = tg.Select(color=color1, when=sg.random_when())
-    shape1 = tg.GetShape(objs1)
-    objs2 = tg.Select(color=color2, shape=shape1, when='now')
-    self._operator = tg.Exist(objs2)
-    self.n_frames = 4
+    def __init__(self):
+        color1, color2 = sg.sample_color(2)
+        objs1 = tg.Select(color=color1, when=sg.random_when())
+        shape1 = tg.GetShape(objs1)
+        objs2 = tg.Select(color=color2, shape=shape1, when='now')
+        self._operator = tg.Exist(objs2)
+        self.n_frames = 4
 
-  @property
-  def instance_size(self):
-    return sg.n_sample_color(2) * sg.n_random_when()
+    @property
+    def instance_size(self):
+        return sg.n_sample_color(2) * sg.n_random_when()
 
 
 class GoShape(Task):
     """Go to shape X."""
 
-    def __init__(self, select_op_set = None):
+    def __init__(self, select_op_set=None):
         self.select_op = []
         shape1 = sg.random_shape()
         when1 = sg.random_when()
@@ -63,7 +64,7 @@ class GoShape(Task):
         self._operator = tg.Go(objs1)
 
         ### todo: make it simple and consistent with others
-        self.n_frames = const.LASTMAP[when1]+1
+        self.n_frames = const.LASTMAP[when1] + 1
 
         # backtrack operator based on epoch index
         self.track_op = {}
@@ -73,30 +74,30 @@ class GoShape(Task):
     def reinit(self, select_op_index, restrictions):
         # copy and update operators
         pass
-        # retrun GoShape(select_op_set)
+        # return GoShape(select_op_set)
 
     @property
     def instance_size(self):
         return sg.n_random_shape() * sg.n_random_when()
 
 
-
 class GoShapeTemporal(TemporalTask):
     """Go to shape X."""
 
-    def __init__(self):
-        super(GoShapeTemporal, self).__init__()
+    def __init__(self, n_frames):
+        super(GoShapeTemporal, self).__init__(n_frames)
         shape1 = sg.random_shape()
         when1 = sg.random_when()
         objs1 = tg.Select(shape=shape1, when=when1)
         self._operator = tg.Go(objs1)
 
         ### todo: make it simple and consistent with others
-        self.n_frames = const.LASTMAP[when1]+1
-
+        self.n_frames = const.LASTMAP[when1] + 1
+        self.n_frames = n_frames
     @property
     def instance_size(self):
         return sg.n_random_shape() * sg.n_random_when()
+
 
 class GoShapeTemporalComposite(tg.TemporalCompositeTask):
     def __init__(self, n_tasks):
@@ -104,12 +105,13 @@ class GoShapeTemporalComposite(tg.TemporalCompositeTask):
         super(GoShapeTemporalComposite, self).__init__(tasks)
         self.n_frames = sum([task.n_frames for task in tasks])
 
+
 task_family_dict = OrderedDict([
     ('GoShape', GoShape),
-    ('ExistShapeOf',ExistShapeOf)
+    ('ExistShapeOf', ExistShapeOf)
 ])
 
 
 def random_task(task_family):
     """Return a random question from the task family."""
-    return task_family_dict[task_family[random.randint(0,len(task_family)-1)]]()
+    return task_family_dict[task_family[random.randint(0, len(task_family) - 1)]]()
