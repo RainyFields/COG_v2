@@ -19,7 +19,7 @@ def get_target_value(t):
 
 
 class FrameInfo(object):
-    def __init__(self, first_shareable=None, task_example=None, task=None, objset=None):
+    def __init__(self, task_example=None, task=None, objset=None):
         """
         used for combining multiple temporal tasks, initialize with 1 task,
         stores each frame object in frame_list
@@ -41,6 +41,7 @@ class FrameInfo(object):
                 n_epochs = task_example["epochs"]
                 task_question = task_example["question"]
                 task_answers = task_example["answers"]
+                first_shareable = task_example['first_shareable']
         else:
             assert isinstance(objset, sg.ObjectSet)
             assert isinstance(task, tg.TemporalTask)
@@ -52,6 +53,7 @@ class FrameInfo(object):
             # TODO: decide if task_question needs to be kept
             task_question = str(task)
             task_answers = [get_target_value(t) for t in task.get_target(objset)]
+            first_shareable = task.first_shareable
 
         relative_tasks = {0}
         self.objset = objset
@@ -62,11 +64,10 @@ class FrameInfo(object):
             description = list()
             if i == self.n_epochs - 1:
                 description.append(["ending of task %d" % 0])
-                self.frame_list.append(self.Frame(self, i, relative_tasks, description, task_answers))
             else:
                 if i == 0:
                     description.append(["start of task %d" % 0])
-                self.frame_list.append(self.Frame(self, i, relative_tasks, description))
+            self.frame_list.append(self.Frame(self, i, relative_tasks, description))
 
         if objset:
             # iterate all objects in objset and add to each frame
@@ -77,13 +78,11 @@ class FrameInfo(object):
                     for epoch in range(obj.epoch[0], obj.epoch[1]):
                         self.frame_list[epoch].objs.append(obj)
 
-        if first_shareable is None:
-            self.first_shareable = np.random.choice(np.arange(0, len(self.frame_list) + 1))
-        else:
-            self.first_shareable = first_shareable
+        self.first_shareable = first_shareable
 
         self.last_task = 0
-        self.last_task_end = 0
+        self.last_task_end = len(self.frame_list) - 1
+        self.last_task_start = 0
 
     def __len__(self):
         return len(self.frame_list)
@@ -108,6 +107,7 @@ class FrameInfo(object):
                                               len(self.frame_list),
                                               relative_tasks
                                               ))
+        print(f'added {i} more frames.')
         self.objset.increase_epoch(self.objset.n_epoch + i)
 
     def get_start_frame(self, new_task_info, relative_tasks):
@@ -132,7 +132,7 @@ class FrameInfo(object):
         shareable_frames = self.frame_list[first_shareable:]
 
         new_task_len = new_task_info.n_epochs
-        # TODO: provide first_shareable from new_task
+        # TODO: provide first_shareable from new_task and update
         # new_task_first_shareable = new_task_info.first_shareable
 
         if len(shareable_frames) == 0:
@@ -147,11 +147,9 @@ class FrameInfo(object):
             # add more frames
             if len(shareable_frames) == new_task_len:
                 self.add_new_frames(1, relative_tasks)
-                print('added one frame')
                 first_shareable += 1
             else:
                 self.add_new_frames(new_task_len - len(shareable_frames), relative_tasks)
-                print(f'added {new_task_len - len(shareable_frames)} frames')
             shareable_frames = self.frame_list[first_shareable:]
             # first check if start of alignment
             # if the alignment starts with start of existing task, then check if new task ends earlier
@@ -164,12 +162,12 @@ class FrameInfo(object):
 
                 # check where the response frame of the new task would be in shareable_frames
                 # if the response frames are overlapping, then shift alignment to "right"
-                if any(f'end of task' in d for d in shareable_frames[new_task_len - 1].description):
+                if first_shareable + new_task_len - 1 == self.last_task_end:
                     first_shareable += 1
                     print('response frame overlap')
                 # if the sample frames are overlapping, then check if the new task ends before the last task
                 # if so, then shift starting frame
-                elif any(f'start of task {self.last_task}' in d for d in self.frame_list[first_shareable].description) \
+                elif first_shareable == self.last_task_start \
                         and first_shareable + new_task_len - 1 <= self.last_task_end:
                     # TODO: check last_task_end
                     first_shareable += 1
@@ -182,7 +180,7 @@ class FrameInfo(object):
                 shareable_frames = self.frame_list[first_shareable:]
             self.last_task_end = first_shareable + new_task_len - 1
             self.last_task = list(relative_tasks)[0]
-
+            self.last_task_start = first_shareable
             return first_shareable
 
     # @property
@@ -221,14 +219,16 @@ class FrameInfo(object):
 
             self.action = self.action + new_frame.action
 
-            # TODO(mbai): change object epoch, add new input to objset.add(merge_idx)
             # TODO(mbai): resolve conflict
             for new_obj in new_frame.objs:
-                self.fi.objset.add(new_obj, self.idx, merge_idx=self.idx)
+                last_added_obj = self.fi.objset.last_added_obj
+                new_added_obj = self.fi.objset.add(new_obj, self.idx, merge_idx=self.idx)
+                if last_added_obj == new_added_obj:
+                    print('already exists')
 
             for epoch, obj_list in self.fi.objset.dict.items():
                 if epoch == self.idx:
-                    self.objs = obj_list
+                    self.objs = obj_list.copy()
 
             # update the dictionary for relative_task_epoch
             temp = self.relative_task_epoch_idx.copy()
@@ -237,7 +237,7 @@ class FrameInfo(object):
 
         def __str__(self):
             return 'frame: ' + str(self.idx) + ', relative tasks: ' + \
-                   ','.join([str(i) for i in self.relative_tasks])\
+                   ','.join([str(i) for i in self.relative_tasks]) \
                    + ' objects: ' + ','.join([str(o) for o in self.objs])
 
 
@@ -247,23 +247,25 @@ def main():
     print(task1, objset1)
     fi1 = FrameInfo(task=task1, objset=objset1)
 
-    task2 = task_bank.GoShapeTemporal(4)
-    objset2 = task1.generate_objset(task1.n_frames)
+    task2 = task_bank.ExistShapeOfTemporal(4)
+    objset2 = task2.generate_objset(task2.n_frames)
     print(task2, objset2)
     fi2 = FrameInfo(task=task2, objset=objset2)
     for frame in fi2:
         frame.relative_tasks = {1}
 
-    print('first_shareables: ', fi1.first_shareable, fi2.first_shareable)
     fi1.first_shareable = 0
+    print('first_shareables: ', fi1.first_shareable, fi2.first_shareable)
+
     ti = cv.TaskInfoConvert(task=task2, objset=objset2)
-    start = fi1.get_start_frame(ti,{1})
+    start = fi1.get_start_frame(ti, {1})
     for i, (old, new) in enumerate(zip(fi1[start:], fi2)):
         old.compatible_merge(new)
     for frame in fi1:
         print(frame)
     print(fi1.objset.dict)
     print(fi1.objset)
+
 
 if __name__ == '__main__':
     main()

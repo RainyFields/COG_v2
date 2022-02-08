@@ -244,15 +244,18 @@ class TemporalTask(Task):
     def instance_size(self):
         pass
 
-    def __init__(self, n_frames, operator=None, first_shareable=None):
+    def __init__(self, n_frames = None, operator=None, first_shareable=None):
         super(TemporalTask, self).__init__(operator)
-        if first_shareable is None:
-            self.first_shareable = np.random.choice(np.arange(0, n_frames + 1))
-        else:
-            self.first_shareable = first_shareable
         self.n_frames = n_frames
+        self._first_shareable = first_shareable
 
 
+    @property
+    def first_shareable(self, seed = None):
+        np.random.seed(seed=seed)
+        if self._first_shareable is None:
+                self._first_shareable = np.random.choice(np.arange(0, self.n_frames + 1))
+        return self._first_shareable
 
 
 class TemporalCompositeTask(Task):
