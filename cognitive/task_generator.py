@@ -404,6 +404,19 @@ class Select(Operator):
 
         return subset
 
+    def update(self, inh_attr, restrictions,):
+        for attr in inh_attr:
+            if attr == "loc":
+                self.loc = restrictions[attr]
+            elif attr == "color":
+                self.color = restrictions[attr]
+            elif attr == "when":
+                self.color = restrictions[attr]
+            elif attr == "shape":
+                self.shape = restrictions[attr]
+            else:
+                raise ValueError("invalid attribute")
+
     def get_expected_input(self, should_be, objset, epoch_now):
         """Guess objset for Select operator.
 

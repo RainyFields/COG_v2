@@ -23,6 +23,7 @@ import itertools
 import string
 import numpy as np
 
+AVG_MEM = 4
 MAX_MEMORY = 3
 LASTMAP = {}
 for k in range(MAX_MEMORY+1):

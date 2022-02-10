@@ -1,21 +1,40 @@
-import cognitive.stim_generator as sg
-import cognitive.task_generator as tg
-import cognitive.convert as cv
-import cognitive.task_bank as task_bank
-
 import numpy as np
 
+import cognitive.stim_generator as sg
+import cognitive.task_generator as tg
+import cognitive.task_bank as task_bank
+from cognitive.helper import get_target_value
 
-def get_target_value(t):
-    # Convert target t to string and convert True/False target values
-    # to lower case strings for consistency with other uses of true/false
-    # in vocabularies.
-    t = t.value if hasattr(t, 'value') else str(t)
-    if t is True or t == 'True':
-        return 'true'
-    if t is False or t == 'False':
-        return 'false'
-    return t
+
+class TaskInfoCombo(object):
+    """
+    Storage of composition information,
+    including task_frame_info, task_example, task and objset
+    :param task_frame_info: FrameInfo
+    :param task_example: including 'family'(task_family), 'epochs'(epochs),'question','objects' and 'answer'
+    :param task: task family
+    :param objset: objset
+    """
+
+    def __init__(self, frame_info = None, task_example=None, task=None, objset=None):
+        " combining with a second task should be implemented incrementally"
+        if frame_info is None or objset is None:
+            raise ValueError("task information is incomplete")
+        else:
+            assert isinstance(frame_info, fi.FrameInfo)
+            assert isinstance(objset, sg.ObjectSet)
+            self.frame_info = frame_info
+            self.objset = objset
+            self.task_example = task_example
+            self.task = task
+
+    def __len__(self):
+        # return number of tasks involved
+        return len(self.frame_info)
+
+    @property
+    def n_epochs(self):
+        return len(self.frame_info)
 
 
 class FrameInfo(object):
@@ -122,7 +141,7 @@ class FrameInfo(object):
         :param new_task_info:
         :return: index of frame from existing frame_info
         '''
-        assert isinstance(new_task_info, cv.TaskInfoConvert)
+        assert isinstance(new_task_info, TaskInfoCombo)
 
         # if multiple tasks are shareable, then start from the last task
         # to maintain preexisting order
@@ -150,6 +169,7 @@ class FrameInfo(object):
                 first_shareable += 1
             else:
                 self.add_new_frames(new_task_len - len(shareable_frames), relative_tasks)
+
             shareable_frames = self.frame_list[first_shareable:]
             # first check if start of alignment
             # if the alignment starts with start of existing task, then check if new task ends earlier
@@ -168,7 +188,7 @@ class FrameInfo(object):
                 # if the sample frames are overlapping, then check if the new task ends before the last task
                 # if so, then shift starting frame
                 elif first_shareable == self.last_task_start \
-                        and first_shareable + new_task_len - 1 <= self.last_task_end:
+                     and first_shareable + new_task_len - 1 <= self.last_task_end:
                     # TODO: check last_task_end
                     first_shareable += 1
                     print('sample frame overlap')
@@ -239,33 +259,3 @@ class FrameInfo(object):
             return 'frame: ' + str(self.idx) + ', relative tasks: ' + \
                    ','.join([str(i) for i in self.relative_tasks]) \
                    + ' objects: ' + ','.join([str(o) for o in self.objs])
-
-
-def main():
-    task1 = task_bank.GoShapeTemporal(4)
-    objset1 = task1.generate_objset(task1.n_frames)
-    print(task1, objset1)
-    fi1 = FrameInfo(task=task1, objset=objset1)
-
-    task2 = task_bank.ExistShapeOfTemporal(4)
-    objset2 = task2.generate_objset(task2.n_frames)
-    print(task2, objset2)
-    fi2 = FrameInfo(task=task2, objset=objset2)
-    for frame in fi2:
-        frame.relative_tasks = {1}
-
-    fi1.first_shareable = 0
-    print('first_shareables: ', fi1.first_shareable, fi2.first_shareable)
-
-    ti = cv.TaskInfoConvert(task=task2, objset=objset2)
-    start = fi1.get_start_frame(ti, {1})
-    for i, (old, new) in enumerate(zip(fi1[start:], fi2)):
-        old.compatible_merge(new)
-    for frame in fi1:
-        print(frame)
-    print(fi1.objset.dict)
-    print(fi1.objset)
-
-
-if __name__ == '__main__':
-    main()
