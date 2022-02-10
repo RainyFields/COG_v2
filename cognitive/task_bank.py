@@ -54,27 +54,40 @@ class GoShape(Task):
     """Go to shape X."""
 
     def __init__(self, select_op_set=None):
-        self.select_op = []
+        self.select_collection = []
         shape1 = sg.random_shape()
         when1 = sg.random_when()
         objs1 = tg.Select(shape=shape1, when=when1)
-        ### shape
-        self.select_op.append(objs1)
+        inherent_attr = {"shape": shape1,
+                         "when":when1}
+
 
         self._operator = tg.Go(objs1)
+        select_tuple = (when1, inherent_attr, objs1, self._operator, "Go")
+        self.select_collection.append(select_tuple)
 
         ### todo: make it simple and consistent with others
         self.n_frames = const.LASTMAP[when1] + 1
 
-        # backtrack operator based on epoch index
-        self.track_op = {}
-        for slt_op in self.select_op:
-            self.track_op[self.n_frames - 1 - const.ALLWHENS.index(slt_op.when)] = slt_op
+        # update epoch index
+        for select_op in self.select_collection:
+            select_op[0] = self.n_frames - 1 - const.ALLWHENS.index(select_op[0])
 
-    def reinit(self, select_op_index, restrictions):
-        # copy and update operators
-        pass
-        # return GoShape(select_op_set)
+    ##### todo: maybe move it to Task class? how to deal with self._operator?
+    def reinit(self, select_epoch_index, restrictions):
+        for i, epoch_index in enumerate(select_epoch_index):
+            select_index = self.op_index(epoch_index,)
+            # update inherent attributes based on restrictions
+            self.select_collection[select_index][2].update(self.select_collection[select_index][1],restrictions[i])
+            # update _operator
+            if self.select_collection[select_index][4] == "Go":
+                self.select_collection[select_index][3] = tg.Go(self.select_collection[select_index][2])
+
+    def op_index(self, epoch_index):
+        for i, select_op in enumerate(self.select_collection):
+            if epoch_index == select_op[0]:
+                return i
+        return "no select operator is found"
 
     @property
     def instance_size(self):
