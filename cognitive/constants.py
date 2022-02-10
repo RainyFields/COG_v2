@@ -35,7 +35,8 @@ for k in range(MAX_MEMORY+1):
     ALLWHENS.append("last%d" % (k))
 ALLWHENS_PROB = [1/(MAX_MEMORY+1)] * len(ALLWHENS)
 
-
+def compare_when(when_list):
+    return max(list(map(lambda x: LASTMAP[x], when_list)))
 
 # RGB, from https://sashat.me/2017/01/11/list-of-20-simple-distinct-colors/
 WORD2COLOR = {

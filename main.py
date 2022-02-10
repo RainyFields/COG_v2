@@ -95,7 +95,8 @@ def generate_example(max_memory, max_distractors, task_family):
         # there might be no objects in the last epoch.
         'question': str(task),
         'objects': [o.dump() for o in objset],
-        'answers': [get_target_value(t) for t in targets]
+        'answers': [get_target_value(t) for t in targets],
+        'first_shareable': task.first_shareable
     }
     frame_info = TaskInfoConvert(example)
     combo_task_info = ComboTaskInfo(example=example, objset = objset, task = task, frameinfo = frame_info)

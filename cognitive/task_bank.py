@@ -33,6 +33,7 @@ FLAGS = tf.app.flags.FLAGS
 
 tf.app.flags.DEFINE_string('task_family', 'all', 'name of the task to be trained')
 
+GLOBAL_SEED = 9
 
 class ExistShapeOf(Task):
     """Check if exist object with shape of a colored object."""
@@ -56,7 +57,7 @@ class GoShape(Task):
     def __init__(self, select_op_set=None):
         self.select_collection = []
         shape1 = sg.random_shape()
-        when1 = sg.random_when()
+        when1 = sg.random_when(seed=GLOBAL_SEED)
         objs1 = tg.Select(shape=shape1, when=when1)
         inherent_attr = {"shape": shape1,
                          "when":when1}
@@ -100,16 +101,36 @@ class GoShapeTemporal(TemporalTask):
     def __init__(self, n_frames):
         super(GoShapeTemporal, self).__init__(n_frames)
         shape1 = sg.random_shape()
-        when1 = sg.random_when()
+        when1 = sg.random_when(seed=GLOBAL_SEED)
         objs1 = tg.Select(shape=shape1, when=when1)
         self._operator = tg.Go(objs1)
 
         ### todo: make it simple and consistent with others
-        self.n_frames = const.LASTMAP[when1] + 1
-        self.n_frames = n_frames
+        self.n_frames = const.compare_when([when1]) + 1
+
     @property
     def instance_size(self):
         return sg.n_random_shape() * sg.n_random_when()
+
+
+class ExistShapeOfTemporal(TemporalTask):
+    """Check if exist object with shape of a colored object."""
+
+    def __init__(self, n_frames):
+        super(ExistShapeOfTemporal, self).__init__()
+        color1, color2 = sg.sample_color(2)
+        when1 = sg.random_when(seed=GLOBAL_SEED)
+        objs1 = tg.Select(color=color1, when=when1)
+        shape1 = tg.GetShape(objs1)
+        when2 = 'last0'
+        objs2 = tg.Select(color=color2, shape=shape1, when=when2)
+        self._operator = tg.Exist(objs2)
+        # TODO: compare when with const.LASTMAP
+        self.n_frames = const.compare_when([when1,when2]) + 1
+
+    @property
+    def instance_size(self):
+        return sg.n_sample_color(2) * sg.n_random_when()
 
 
 class GoShapeTemporalComposite(tg.TemporalCompositeTask):

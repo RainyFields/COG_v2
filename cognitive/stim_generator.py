@@ -480,7 +480,7 @@ class ObjectSet(object):
                     raise NotImplementedError(
                         'When value: {:s} is not implemented'.format(str(obj.when)))
             else:
-                obj.epoch = [merge_idx,merge_idx+1]
+                obj.epoch = [merge_idx, merge_idx + 1]
         # Insert and maintain order
         i = bisect_left(self.end_epoch, obj.epoch[0])
         self.set.insert(i, obj)
@@ -895,7 +895,7 @@ def n_random_colorshape():
     return len(const.ALLCOLORSHAPES)
 
 
-def random_when():
+def random_when(seed=None):
     """Random choose a when property.
 
     Here we use the numpy random generator to provide different probabilities.
@@ -903,6 +903,7 @@ def random_when():
     Returns:
       when: a string.
     """
+    np.random.seed(seed=seed)
     return np.random.choice(const.ALLWHENS, p=const.ALLWHENS_PROB)
 
 
