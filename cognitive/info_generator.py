@@ -104,13 +104,14 @@ class TaskInfoCompo(object):
 
                     new_task_info.tasks[0].reinit(i, attr_expected)
                     new_task_info.task_info[-1] = str(new_task_info.curr_task)
-                    new_task_info.objset = new_task_info.curr_task.generate_objset(n_epoch=new_task_info.task.n_frames,
+                    new_task_info.frame_info.objset = new_task_info.curr_task.generate_objset(n_epoch=new_task_info.task.n_frames,
                                                                                    average_memory_span=CONST.AVG_MEM)
-                    new_task_info.example["question"] = str(new_task_info.curr_task)
-                    new_task_info.example["objects"] = [o.dump() for o in
-                                                        new_task_info.objset]  ## todo: has this been updated?
-                    targets = new_task_info.curr_task.get_target(self.frame_info.objset)
-                    new_task_info.example["answers"] = [get_target_value(t) for t in targets]
+
+                    targets = new_task_info.curr_task.get_target(new_task_info.frame_info.objset)
+
+                    #### todo (maybe): make first task also composition task? (null init of frameinfo)
+                    self.frame_info[-1].action = targets
+
                     ##### todo: does compatible merge include updating frame_info?
                     old_frame.compatible_merge(new_task_info.frame_info[i])
                 else:
@@ -120,34 +121,24 @@ class TaskInfoCompo(object):
 
 
 class FrameInfo(object):
-    def __init__(self, task_example=None, task=None, objset=None):
+    def __init__(self, task, objset=None):
         """
         used for combining multiple temporal tasks, initialize with 1 task,
         stores each frame object in frame_list
-        :param task_example: example dict from main.generate_example
         :param task: stim_generator.Task object
         :param objset: objset related to the task
         """
-        if task is None or objset is None:
-            if task_example is None:
-                raise ValueError("no tasks is provided")
-            else:
-                n_epochs = task_example["epochs"]
-                task_question = task_example["question"]
-                task_answers = task_example["answers"]
-                first_shareable = task_example['first_shareable']
-        else:
-            assert isinstance(objset, sg.ObjectSet)
-            assert isinstance(task, tg.TemporalTask)
+        assert isinstance(objset, sg.ObjectSet)
+        assert isinstance(task, tg.TemporalTask)
 
-            if task.n_frames != objset.n_epoch:
-                raise ValueError('Task epoch does not equal objset epoch')
+        if task.n_frames != objset.n_epoch:
+            raise ValueError('Task epoch does not equal objset epoch')
 
-            n_epochs = task.n_frames
-            # TODO: decide if task_question needs to be kept
-            task_question = str(task)
-            task_answers = [get_target_value(t) for t in task.get_target(objset)]
-            first_shareable = task.first_shareable
+        n_epochs = task.n_frames
+        # TODO: decide if task_question needs to be kept
+        task_question = str(task)
+        task_answers = [get_target_value(t) for t in task.get_target(objset)]
+        first_shareable = task.first_shareable
 
         relative_tasks = [0]  ### todo: why it was originally init as dict?
         self.objset = objset
@@ -305,6 +296,7 @@ class FrameInfo(object):
             self.description = list() if None else description
             self.action = list() if None else action
             self.objs = objs if objs else list()
+
 
             self.relative_task_epoch_idx = {}
             for task in self.relative_tasks:

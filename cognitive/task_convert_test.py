@@ -1,9 +1,8 @@
 import numpy as np
 import cognitive.task_bank as task_bank
-from cognitive.frame_info import FrameInfo
+from cognitive.info_generator import FrameInfo
 from cognitive.helper import get_target_value
-from cognitive.frame_info import TaskInfoCombo
-from cognitive.frame_info import merge
+from cognitive.info_generator import TaskInfoCompo
 
 def main():
     task1 = task_bank.GoShapeTemporal(4)
@@ -20,7 +19,7 @@ def main():
         'answers': [get_target_value(t) for t in targets1],
         'first_shareable': task1.first_shareable
     }
-    tic1 = TaskInfoCombo(frame_info=fi1, task_example = task_example1, task = task1, objset=objset1)
+    tic1 = TaskInfoCompo(frame_info=fi1, task_example = task_example1, task = task1, objset=objset1)
 
     task2 = task_bank.GoShapeTemporal(4)
     objset2 = task2.generate_objset(task2.n_frames)
