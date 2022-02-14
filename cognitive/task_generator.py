@@ -249,9 +249,18 @@ class TemporalTask(Task):
         self.n_frames = n_frames
         self._first_shareable = first_shareable
 
+    def reinit(self):
+        pass
 
     @property
     def first_shareable(self, seed = None):
+        '''
+
+        :param seed:
+        :return: the frame at which the task is first shareable.
+        if the task is non-shareable, first_shareable = len(task)
+        if no input, start at random frame, including the possibility of non-shareable
+        '''
         np.random.seed(seed=seed)
         if self._first_shareable is None:
                 self._first_shareable = np.random.choice(np.arange(0, self.n_frames + 1))

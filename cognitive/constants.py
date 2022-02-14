@@ -38,6 +38,17 @@ ALLWHENS_PROB = [1/(MAX_MEMORY+1)] * len(ALLWHENS)
 def compare_when(when_list):
     return max(list(map(lambda x: LASTMAP[x], when_list)))
 
+def get_target_value(t):
+    # Convert target t to string and convert True/False target values
+    # to lower case strings for consistency with other uses of true/false
+    # in vocabularies.
+    t = t.value if hasattr(t, 'value') else str(t)
+    if t is True or t == 'True':
+        return 'true'
+    if t is False or t == 'False':
+        return 'false'
+    return t
+
 # RGB, from https://sashat.me/2017/01/11/list-of-20-simple-distinct-colors/
 WORD2COLOR = {
     'red': (230, 25, 75),
