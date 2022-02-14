@@ -4,6 +4,82 @@ import cognitive.stim_generator as sg
 import cognitive.task_generator as tg
 import cognitive.task_bank as task_bank
 from cognitive.helper import get_target_value
+import cognitive.constants as CONST
+
+def merge(compo_task, new_task_info, reuse=None):
+    '''
+
+    :param new_task_info: TaskInfoCombo object
+    :return: None if no change, and the new task if merge needed change
+    '''
+    # TODO(mbai): change task instruction here
+    # TODO: location conflict, feature (shape, color) conflict
+
+    assert isinstance(new_task_info, TaskInfoCombo)
+    ##### todo: where did we store the number of tasks?
+    if len(new_task_info.task_info) > 1:
+        raise NotImplementedError('Currently cannot support adding new composite tasks')
+
+    if reuse is None:
+        reuse = 0.5
+
+    # correct task index in new_task_info
+    #### todo: what is going on here?
+    next_task_idx = len(compo_task.task_info)
+    # for frame in new_task_info.frame_info:
+    #     # todo: what if the old frame is associated with the previous task? # I updated the previous task frame relative_task with new task_index
+    #     # frame.relative_tasks = [next_task_idx + i for i, _ in enumerate(frame.relative_tasks)]
+    #     frame.relative_tasks = [next_task_idx]
+    #     for i, task in enumerate(frame.relative_tasks):
+    #         frame.relative_task_epoch_idx[task] =
+    #         frame.relative_task_epoch_idx[next_task_idx + i] = frame.relative_task_epoch_idx[task].pop()
+    #         task = next_task_idx + i
+
+    start = compo_task.frame_info.get_start_frame(new_task_info, relative_tasks=[0])
+
+    if start == -1:
+        # queue
+        extra_f = len(new_task_info.frame_info)
+    else:
+        extra_f = new_task_info.n_epochs - compo_task.n_epochs - start
+
+    compo_task.frame_info.add_new_frames(extra_f, {next_task_idx}, )
+
+    curr_abs_idx = start
+
+    for i, (old_frame, new_frame) in enumerate(zip(compo_task.frame_info[start:], new_task_info.frame_info)):
+        assert isinstance(old_frame, FrameInfo.Frame)
+        assert isinstance(new_frame, FrameInfo.Frame)
+        # if there are no objects in the frame, then freely merge
+        if not old_frame.objs or not new_frame.objs:
+            try:
+                old_frame.compatible_merge(new_frame)  # always update frame descriptions
+            except: continue
+        else:
+            if np.random.random() < reuse:  # use curr frame info from previous task and reinit new task
+                attr_expected = dict()
+                # random select one obj from old frame objs
+                old_obj = np.random.choice(old_frame.objs)
+                attr_expected["loc"] = old_obj.loc
+                attr_expected["when"] = old_obj.when
+                attr_expected["shape"] = old_obj.shape
+                attr_expected["color"] = old_obj.color
+
+                new_task_info.curr_task.reinit(i, attr_expected)
+                new_task_info.task_info[-1] = str(new_task_info.curr_task)
+                new_task_info.objset = new_task_info.curr_task.generate_objset(n_epoch=new_task_info.task.n_frames,
+                                                                          average_memory_span=CONST.AVG_MEM)
+                new_task_info.example["question"] = str(new_task_info.curr_task)
+                new_task_info.example["objects"] = [o.dump() for o in new_task_info.objset] ## todo: has this been updated?
+                targets = new_task_info.curr_task.get_target(compo_task.frame_info.objset)
+                new_task_info.example["answers"] = [get_target_value(t) for t in targets]
+                ##### todo: does compatible merge include updating frame_info?
+                old_frame.compatible_merge(new_task_info.frame_info[i])
+            else:
+                old_frame.compatible_merge(new_frame)
+
+        curr_abs_idx += 1
+    return compo_task
 
 
 class TaskInfoCombo(object):
@@ -21,12 +97,13 @@ class TaskInfoCombo(object):
         if frame_info is None or objset is None:
             raise ValueError("task information is incomplete")
         else:
-            assert isinstance(frame_info, fi.FrameInfo)
+            assert isinstance(frame_info, FrameInfo)
             assert isinstance(objset, sg.ObjectSet)
             self.frame_info = frame_info
             self.objset = objset
             self.task_example = task_example
-            self.task = task
+            self.curr_task = task
+            self.task_info = [str(task)]
 
     def __len__(self):
         # return number of tasks involved
@@ -74,7 +151,7 @@ class FrameInfo(object):
             task_answers = [get_target_value(t) for t in task.get_target(objset)]
             first_shareable = task.first_shareable
 
-        relative_tasks = {0}
+        relative_tasks = [0] ### todo: why it was originally init as dict?
         self.objset = objset
         self.frame_list = list()
         self.n_epochs = n_epochs
@@ -126,7 +203,7 @@ class FrameInfo(object):
                                               len(self.frame_list),
                                               relative_tasks
                                               ))
-        print(f'added {i} more frames.')
+        print('added {i} more frames.')
         self.objset.increase_epoch(self.objset.n_epoch + i)
 
     def get_start_frame(self, new_task_info, relative_tasks):
@@ -259,3 +336,7 @@ class FrameInfo(object):
             return 'frame: ' + str(self.idx) + ', relative tasks: ' + \
                    ','.join([str(i) for i in self.relative_tasks]) \
                    + ' objects: ' + ','.join([str(o) for o in self.objs])
+
+
+
+

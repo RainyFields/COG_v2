@@ -1,4 +1,3 @@
-import cognitive.frame_info as fi
 import cognitive.constants as CONST
 import numpy as np
 

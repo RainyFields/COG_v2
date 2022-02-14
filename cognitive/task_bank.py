@@ -57,7 +57,7 @@ class GoShape(Task):
     def __init__(self, select_op_set=None):
         self.select_collection = []
         shape1 = sg.random_shape()
-        when1 = sg.random_when(seed=GLOBAL_SEED)
+        when1 = sg.random_when()
         objs1 = tg.Select(shape=shape1, when=when1)
         inherent_attr = {"shape": shape1,
                          "when":when1}
@@ -101,7 +101,7 @@ class GoShapeTemporal(TemporalTask):
     def __init__(self, n_frames):
         super(GoShapeTemporal, self).__init__(n_frames)
         shape1 = sg.random_shape()
-        when1 = sg.random_when(seed=GLOBAL_SEED)
+        when1 = sg.random_when()
         objs1 = tg.Select(shape=shape1, when=when1)
         self._operator = tg.Go(objs1)
 
@@ -119,7 +119,7 @@ class ExistShapeOfTemporal(TemporalTask):
     def __init__(self, n_frames):
         super(ExistShapeOfTemporal, self).__init__()
         color1, color2 = sg.sample_color(2)
-        when1 = sg.random_when(seed=GLOBAL_SEED)
+        when1 = sg.random_when()
         objs1 = tg.Select(color=color1, when=when1)
         shape1 = tg.GetShape(objs1)
         when2 = 'last0'
