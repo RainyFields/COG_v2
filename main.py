@@ -35,9 +35,7 @@ import tensorflow.compat.v1 as tf
 
 from cognitive import stim_generator as sg
 import cognitive.task_bank as task_bank
-from cognitive import task_generator as tg
-from cognitive.convert import TaskInfoConvert
-from cognitive.combo_task_info import ComboTaskInfo
+import cognitive.constants as CONST
 FLAGS = tf.flags.FLAGS
 
 tf.flags.DEFINE_integer('max_memory', 3, 'maximum memory duration')
@@ -56,18 +54,6 @@ try:
     range_fn = xrange  # py 2
 except NameError:
     range_fn = range  # py 3
-
-
-def get_target_value(t):
-    # Convert target t to string and convert True/False target values
-    # to lower case strings for consistency with other uses of true/false
-    # in vocabularies.
-    t = t.value if hasattr(t, 'value') else str(t)
-    if t is True or t == 'True':
-        return 'true'
-    if t is False or t == 'False':
-        return 'false'
-    return t
 
 
 def generate_example(max_memory, max_distractors, task_family):
@@ -89,13 +75,14 @@ def generate_example(max_memory, max_distractors, task_family):
     # Getting targets can remove some objects from objset.
     # Create example fields after this call.
     targets = task.get_target(objset)
+    # TODO: make sure 'objests' is an objectset
     example = {
         'family': task_family,
         'epochs': epochs,  # saving an epoch explicitly is needed because
         # there might be no objects in the last epoch.
         'question': str(task),
-        'objects': [o.dump() for o in objset],
-        'answers': [get_target_value(t) for t in targets],
+        'objects': objset,
+        'answers': [CONST.get_target_value(t) for t in targets],
         'first_shareable': task.first_shareable
     }
     frame_info = TaskInfoConvert(example)
