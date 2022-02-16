@@ -244,16 +244,13 @@ class TemporalTask(Task):
     def instance_size(self):
         pass
 
-    def __init__(self, n_frames = None, operator=None, first_shareable=None):
+    def __init__(self, n_frames=None, operator=None, first_shareable=None):
         super(TemporalTask, self).__init__(operator)
         self.n_frames = n_frames
         self._first_shareable = first_shareable
 
-    def reinit(self):
-        pass
-
     @property
-    def first_shareable(self, seed = None):
+    def first_shareable(self, seed=None):
         '''
 
         :param seed:
@@ -263,8 +260,50 @@ class TemporalTask(Task):
         '''
         np.random.seed(seed=seed)
         if self._first_shareable is None:
-                self._first_shareable = np.random.choice(np.arange(0, self.n_frames + 1))
+            self._first_shareable = np.random.choice(np.arange(0, self.n_frames + 1))
         return self._first_shareable
+
+    def reinit(self):
+        pass
+
+    def generate_objset(self, n_distractor=0, average_memory_span=2):
+        """Guess objset for all n_epoch.
+
+        Mathematically, the average_memory_span is n_max_backtrack/3
+
+        Args:
+          n_distractor: int, number of distractors to add
+          average_memory_span: int, the average number of epochs by which an object
+            need to be held in working memory, if needed at all
+
+        Returns:
+          objset: full objset for all n_epoch
+        """
+        n_epoch = self.n_frames
+        n_max_backtrack = int(average_memory_span * 3)  ### why do this convertion? waste of time?
+        objset = sg.ObjectSet(n_epoch=n_epoch, n_max_backtrack=n_max_backtrack)
+
+        # Guess objects
+        # Importantly, we generate objset backward in time
+        ## xlei: only update the last epoch
+        ## xlei todo: delete distractor done
+
+        epoch_now = n_epoch - 1
+        for _ in range(n_distractor):
+            objset.add_distractor(epoch_now)  # distractor
+        objset = self.guess_objset(objset, epoch_now)
+
+        # epoch_now = n_epoch - 1
+        # while epoch_now >= 0:
+        #   if n_distractor == 0:
+        #     break
+        #   else:
+        #     for _ in range(n_distractor):
+        #       objset.add_distractor(epoch_now)  # distractor
+        #     objset = self.guess_objset(objset, epoch_now)
+        #     epoch_now -= 1
+
+        return objset
 
 
 class TemporalCompositeTask(Task):
@@ -413,7 +452,7 @@ class Select(Operator):
 
         return subset
 
-    def update(self, inh_attr, restrictions,):
+    def update(self, inh_attr, restrictions, ):
         for attr in inh_attr:
             if attr == "loc":
                 self.loc = restrictions[attr]
@@ -1010,3 +1049,15 @@ def generate_objset(task, n_epoch=30, distractor=True):
         objset = task.get_expected_input(objset, epoch_now)
         break
     return objset
+
+
+def get_target_value(t):
+    # Convert target t to string and convert True/False target values
+    # to lower case strings for consistency with other uses of true/false
+    # in vocabularies.
+    t = t.value if hasattr(t, 'value') else str(t)
+    if t is True or t == 'True':
+        return 'true'
+    if t is False or t == 'False':
+        return 'false'
+    return t

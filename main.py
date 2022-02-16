@@ -34,8 +34,11 @@ import numpy as np
 import tensorflow.compat.v1 as tf
 
 from cognitive import stim_generator as sg
+from cognitive import task_generator as tg
 import cognitive.task_bank as task_bank
 import cognitive.constants as CONST
+import cognitive.info_generator as ig
+
 FLAGS = tf.flags.FLAGS
 
 tf.flags.DEFINE_integer('max_memory', 3, 'maximum memory duration')
@@ -56,60 +59,54 @@ except NameError:
     range_fn = range  # py 3
 
 
-def generate_example(max_memory, max_distractors, task_family):
+def generate_temporal_example(max_memory, max_distractors, task_family):
     # random.seed(1)
 
     task = task_bank.random_task(task_family)
+    assert isinstance(task, tg.TemporalTask)
     epochs = task.n_frames
 
     # To get maximum memory duration, we need to specify the following average
     # memory value
     avg_mem = round(max_memory / 3.0 + 0.01, 2)
     if max_distractors == 0:
-        objset = task.generate_objset(n_epoch=epochs,
-                                      average_memory_span=avg_mem)
+        objset = task.generate_objset(average_memory_span=avg_mem)
     else:
-        objset = task.generate_objset(n_epoch=epochs,
-                                      n_distractor=random.randint(1, max_distractors),
+        objset = task.generate_objset(n_distractor=random.randint(1, max_distractors),
                                       average_memory_span=avg_mem)
     # Getting targets can remove some objects from objset.
     # Create example fields after this call.
     targets = task.get_target(objset)
-    # TODO: make sure 'objests' is an objectset
-    example = {
-        'family': task_family,
-        'epochs': epochs,  # saving an epoch explicitly is needed because
-        # there might be no objects in the last epoch.
-        'question': str(task),
-        'objects': objset,
-        'answers': [CONST.get_target_value(t) for t in targets],
-        'first_shareable': task.first_shareable
-    }
-    frame_info = TaskInfoConvert(example)
-    combo_task_info = ComboTaskInfo(example=example, objset = objset, task = task, frameinfo = frame_info)
-    return combo_task_info
+
+    frame_info = ig.FrameInfo(task, objset)
+    compo_info = ig.TaskInfoCompo(task, frame_info)
+    return compo_info
 
 
-def generate_temporal_example(max_memory, max_distractors, n_tasks):
+def generate_compo_temporal_example(max_memory, max_distractors, n_tasks):
+    '''
 
-    # sample n_tasks
+    :param max_memory:
+    :param max_distractors:
+    :param n_tasks:
+    :return: combined TaskInfo Compo
+    '''
     families = list(task_bank.task_family_dict.keys())
-
-    combo_task_list = []
+    print(families)
+    compo_tasks = []
     for i in range(n_tasks):
-        combo_task_info = generate_example(max_memory, max_distractors, families)
-        combo_task_list.append(combo_task_info)
-
+        info = generate_temporal_example(max_memory, max_distractors, families)
+        compo_tasks.append(info)
 
     # temporal combination
-    combo_frames = None
-    for i, task in enumerate(combo_task_list):
-        example_current_task= combo_task_list[i]
-        if combo_frames == None:
-            combo_frames = example_current_task.frameinfo
-        combo_frames = combo_frames.merge(example_current_task)
+    cur_task = compo_tasks[0]
+    for task in compo_tasks[1:]:
+        cur_task.merge(task, reuse=0)
+    return cur_task
 
-    return combo_frames
+
+def generate_dataset(max_memory, max_distractors):
+    return
 
 
 def log_exceptions(func):
@@ -129,21 +126,22 @@ def main(argv):
     # go shape: point at last sth
 
     max_distractors = 0
-    max_memory = 10
+    max_memory = 12
     families = list(task_bank.task_family_dict.keys())
 
     # test for single task, conversion etc
-    combotask_info = generate_example(max_memory, max_distractors, families)
-    frameinfo = TaskInfoConvert(combotask_info.example)
+    info = generate_temporal_example(max_memory, max_distractors, ['GoShapeOf'])
+    print(info.tasks[0])
 
-    print(frameinfo)
-    # print("example", example)
-    # print("objset", objset)
-    # print("task", task)
+    print(info.get_examples()[0]['answers'])
+    print(info.frame_info.objset)
+    # sg.render(info.frame_info.objset, save_name='cog.avi')
 
-    # test for temporal composition
-    # combo_frames = generate_temporal_example(max_memory,max_distractors,1)
-    # print(combo_frames)
+    # compo_info = generate_compo_temporal_example(max_memory, max_distractors, 2)
+    # print(compo_info)
+    # for f in compo_info.frame_info:
+    #     print(f)
+    # sg.render(compo_info.frame_info.objset, save_name='cog.avi')
 
 if __name__ == '__main__':
     tf.app.run(main)

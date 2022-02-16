@@ -792,14 +792,16 @@ def save_movie(movie, fname, t_total):
       fname: str, file name to be saved
       t_total: total time length of the video in unit second
     """
+    print('Saving movie...')
     movie = movie.astype(np.uint8)
     # opencv interprets color channels as (B, G, R), so flip channel order
     movie = movie[..., ::-1]
     img_size = movie.shape[1]
     n_frame = len(movie)
+    fourcc = cv2.VideoWriter_fourcc(*'MPEG')
     # filename, FOURCC (video code) (MJPG works), frame/second, framesize
     writer = cv2.VideoWriter(fname,
-                             cv2.VideoWriter_fourcc(*'MJPG'),
+                             fourcc,
                              int(n_frame / t_total), (img_size, img_size))
 
     for frame in movie:
@@ -905,6 +907,10 @@ def random_when(seed=None):
     """
     np.random.seed(seed=seed)
     return np.random.choice(const.ALLWHENS, p=const.ALLWHENS_PROB)
+
+
+def sample_when(n=1, seed=None):
+    return sorted([random_when(seed) for i in range(n)])
 
 
 def n_random_when():
