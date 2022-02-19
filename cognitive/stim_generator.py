@@ -864,6 +864,16 @@ def random_attr(attr_type):
         raise NotImplementedError('Unknown attr_type :' + str(attr_type))
 
 
+def random_loc(n=1):
+    locs = list()
+    for i in range(n):
+        loc = random_attr('loc')
+        while loc in locs:
+            loc = random_attr('loc')
+        locs.append(loc)
+    return locs
+
+
 def random_space():
     return random.choice(const.ALLSPACES)
 

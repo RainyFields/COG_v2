@@ -237,6 +237,65 @@ class GoShapeOfTemporal(TemporalTask):
         return sg.n_sample_color(3)
 
 
+class CompareColorTemporal(TemporalTask):
+    """Compare color between two objects."""
+
+    def __init__(self):
+        super(CompareColorTemporal, self).__init__()
+        shape1, shape2 = sg.sample_shape(2)
+        when1 = sg.random_when()
+        objs1 = tg.Select(shape=shape1, when=when1)
+        objs2 = tg.Select(shape=shape2, when='last0')
+        a1 = tg.GetColor(objs1)
+        a2 = tg.GetColor(objs2)
+        self._operator = tg.IsSame(a1, a2)
+        self.n_frames = const.compare_when([when1, 'last0']) + 1
+
+    @property
+    def instance_size(self):
+        return sg.n_sample_shape(2) * (sg.n_random_when()) ** 2
+
+
+class CompareShapeTemporal(TemporalTask):
+    """Compare shape between two objects."""
+
+    def __init__(self):
+        super(CompareShapeTemporal, self).__init__()
+        color1, color2 = sg.sample_color(2)
+        when1 = sg.random_when()
+        objs1 = tg.Select(color=color1, when=when1)
+        objs2 = tg.Select(color=color2, when='last0')
+        a1 = tg.GetShape(objs1)
+        a2 = tg.GetShape(objs2)
+        self._operator = tg.IsSame(a1, a2)
+        self.n_frames = const.compare_when([when1,'last0']) + 1
+
+    @property
+    def instance_size(self):
+        return sg.n_sample_color(2) * (sg.n_random_when()) ** 2
+
+
+class CompareLocTemporal(TemporalTask):
+    """Compare color between two objects."""
+
+    # TODO: fix
+    def __init__(self):
+        super(CompareLocTemporal, self).__init__()
+        when1 = sg.random_when()
+        when2 = sg.random_when()
+        objs1 = tg.Select(when=when1)
+        objs2 = tg.Select(when='last0')
+        a1 = tg.GetLoc(objs1)
+        a2 = tg.GetLoc(objs2)
+        self._operator = tg.IsSame(a1, a2)
+        self.n_frames = const.compare_when([when1, 'last0']) + 1
+
+    @property
+    def instance_size(self):
+        return sg.n_sample_shape(2) * (sg.n_random_when()) ** 2
+
+
+
 # class GoShapeTemporalComposite(tg.TemporalCompositeTask):
 #     def __init__(self, n_tasks):
 #         tasks = [GoShapeTemporal() for i in range(n_tasks)]
@@ -248,7 +307,9 @@ task_family_dict = OrderedDict([
     ('GoShape', GoShapeTemporal),
     ('ExistShapeOf', ExistShapeOfTemporal),
     ('GoShapeOf', GoShapeOfTemporal),
-    ('GoColorOf', GoColorOfTemporal)
+    ('GoColorOf', GoColorOfTemporal),
+    ('CompareShape', CompareShapeTemporal),
+    ('CompareColor', CompareColorTemporal)
 ])
 
 

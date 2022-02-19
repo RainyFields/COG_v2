@@ -18,6 +18,7 @@ class TaskInfoCompo(object):
         # combining with a second task should be implemented incrementally
         assert isinstance(task, tg.TemporalTask)
 
+        # TODO: add action flag to frames
         self.task_objset = dict()
         self.tasks = [task]
         if frame_info is None:
@@ -53,14 +54,13 @@ class TaskInfoCompo(object):
         targets = [task.get_target(objsets[i]) for i, task in enumerate(tasks)]
         for i, task in enumerate(tasks):
             examples.append({
-                'family': task.__class__.__name__,
+                'family': str(task.__class__.__name__),
                 # saving an epoch explicitly is needed because
                 # there might be no objects in the last epoch.
-                'epochs': task.n_frames,
+                'epochs': int(task.n_frames),
                 'question': str(task),
                 'objects': [o.dump() for o in objsets[i]],
                 'answers': [const.get_target_value(t) for t in targets[i]],
-                'first_shareable': task.first_shareable
             })
         return examples
 
@@ -76,7 +76,7 @@ class TaskInfoCompo(object):
         :return: None if no change, and the new task if merge needed change
         '''
         # TODO(mbai): change task instruction here
-
+        # TODO: very specific task instruction (related to remembering, forgetting, etc)
         assert isinstance(new_task_info, TaskInfoCompo)
         if len(new_task_info.tasks) > 1:
             raise NotImplementedError('Currently cannot support adding new composite tasks')
@@ -123,9 +123,9 @@ class TaskInfoCompo(object):
                     old_frame.compatible_merge(new_frame)
             curr_abs_idx += 1
 
+        self.task_objset[len(self.tasks)] = new_task_info.task_objset[0]
         self.tasks.append(new_task_info.tasks[0])
         # TODO: refactor by making updating functions
-        self.task_objset[len(self.tasks)] = new_task_info.task_objset[0]
 
 class FrameInfo(object):
     def __init__(self, task, objset=None):
@@ -202,7 +202,6 @@ class FrameInfo(object):
                                               idx=len(self.frame_list),
                                               relative_tasks=relative_tasks
                                               ))
-        print(f'added {i} more frames.')
         self.objset.increase_epoch(self.objset.n_epoch + i)
 
     def get_start_frame(self, new_task_info, relative_tasks):
@@ -249,7 +248,6 @@ class FrameInfo(object):
         else:
             # add more frames
             if len(shareable_frames) == new_task_len:
-                print('sample frame overlap')
                 self.add_new_frames(1, relative_tasks)
                 first_shareable += 1
             else:
@@ -269,14 +267,12 @@ class FrameInfo(object):
                 # if the response frames are overlapping, then shift alignment to "right"
                 if first_shareable + new_task_len - 1 == self.last_task_end:
                     first_shareable += 1
-                    print('response frame overlap')
                 # if the sample frames are overlapping, then check if the new task ends before the last task
                 # if so, then shift starting frame
                 elif first_shareable == self.last_task_start \
                         and first_shareable + new_task_len - 1 <= self.last_task_end:
                     # TODO: check last_task_end
                     first_shareable += 1
-                    print('sample frame overlap')
                 else:
                     aligned = True
 
@@ -333,7 +329,6 @@ class FrameInfo(object):
                 new_added_obj = self.fi.objset.add(new_obj, self.idx, merge_idx=self.idx)
                 if last_added_obj == new_added_obj:
                     print('already exists')
-
             for epoch, obj_list in self.fi.objset.dict.items():
                 if epoch == self.idx:
                     self.objs = obj_list.copy()

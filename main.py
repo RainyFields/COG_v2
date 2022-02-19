@@ -21,6 +21,10 @@ from __future__ import print_function
 
 import errno
 import functools
+
+import timeit
+import cv2
+from PIL import Image
 import gzip
 import itertools
 import json
@@ -29,7 +33,7 @@ import os
 import random
 import shutil
 import traceback
-
+from collections import defaultdict
 import numpy as np
 import tensorflow.compat.v1 as tf
 
@@ -83,16 +87,18 @@ def generate_temporal_example(max_memory, max_distractors, task_family):
     return compo_info
 
 
-def generate_compo_temporal_example(max_memory, max_distractors, n_tasks):
+def generate_compo_temporal_example(max_memory, max_distractors, families, n_tasks=1):
     '''
 
+    :param families:
     :param max_memory:
     :param max_distractors:
     :param n_tasks:
     :return: combined TaskInfo Compo
     '''
-    families = list(task_bank.task_family_dict.keys())
-    print(families)
+    if n_tasks == 1:
+        return generate_temporal_example(max_memory, max_distractors, families)
+
     compo_tasks = []
     for i in range(n_tasks):
         info = generate_temporal_example(max_memory, max_distractors, families)
@@ -103,10 +109,6 @@ def generate_compo_temporal_example(max_memory, max_distractors, n_tasks):
     for task in compo_tasks[1:]:
         cur_task.merge(task, reuse=0)
     return cur_task
-
-
-def generate_dataset(max_memory, max_distractors):
-    return
 
 
 def log_exceptions(func):
@@ -122,6 +124,138 @@ def log_exceptions(func):
     return wrapped_func
 
 
+class FileWriter(object):
+    """Writes per_file examples in a file. Then, picks a new file."""
+
+    def __init__(self, base_name, per_file=100, start_index=0, compress=True):
+        self.per_file = per_file
+        self.base_name = base_name
+        self.compress = compress
+        self.cur_file_index = start_index - 1
+        self.cur_file = None
+        self.written = 0
+        self.file_names = []
+
+        self._new_file()
+
+    def _file_name(self):
+        return '%s_%d.json' % (self.base_name, self.cur_file_index)
+
+    def _new_file(self):
+        if self.cur_file:
+            self.close()
+
+        self.written = 0
+        self.cur_file_index += 1
+        # 'b' is needed because we want to seek from the end. Text files
+        # don't allow seeking from the end (because width of one char is
+        # not fixed)
+        self.cur_file = open(self._file_name(), 'wb')
+        self.file_names.append(self._file_name())
+
+    def write(self, data):
+        if self.written >= self.per_file:
+            self._new_file()
+        self.cur_file.write(data)
+        self.cur_file.write(b'\n')
+        self.written += 1
+
+    def close(self):
+        self.cur_file.seek(-1, os.SEEK_END)
+        # Remove last new line
+        self.cur_file.truncate()
+        self.cur_file.close()
+
+        if self.compress:
+            # Compress the file and delete the original. We can write to compressed
+            # file immediately because truncate() does not work on compressed files.
+            with open(self._file_name(), 'rb') as f_in, \
+                    gzip.open(self._file_name() + '.gz', 'wb') as f_out:
+                shutil.copyfileobj(f_in, f_out)
+
+            os.remove(self._file_name())
+
+
+def write_task_instance(fname, task_info, img_size):
+    if not os.path.exists(fname):
+        os.makedirs(fname)
+    objset = task_info.frame_info.objset
+    for i, epoch in enumerate(sg.render(objset, img_size)):
+        epoch = (epoch * 255).astype(np.uint8)
+        img = Image.fromarray(epoch, 'RGB')
+        filename = os.path.join(fname, f'epoch{i}.png')
+        img.save(filename)
+    for i, task_example in enumerate(task_info.get_examples()):
+        filename = os.path.join(fname, f'task{i} example')
+        with open(filename, 'w') as f:
+            json.dump(task_example, f, indent=4)
+
+
+def generate_dataset(max_memory, max_distractors,
+                     examples_per_family, output_dir,
+                     random_families=True, composition=1,
+                     img_size=224, train=0.7, validation=0.3):
+    # TODO: training: 70% validation: 30%
+    # 1 folder for each instance
+    # save movie, no write movie, task_info (n_frames) json, task_instruction json
+    # see if movie np.array can be saved to images
+    # as many instances as possible, 2000 for each task
+    if not random_families:
+        assert composition == 1
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    families_count = defaultdict(lambda: 0)
+    families = list(task_bank.task_family_dict.keys())
+    print(families)
+    n_families = len(families)
+    total_examples = n_families * examples_per_family * composition
+    train_examples = total_examples * train
+    validation_examples = total_examples * validation
+
+    base_fname = os.path.join(output_dir,
+                              f'cog_compo_{composition}_mem_{max_memory}_distr_{max_distractors}')
+
+    train_fname = os.path.join(base_fname, 'train')
+    validation_fname = os.path.join(base_fname, 'validation')
+
+    if not os.path.exists(train_fname):
+        os.makedirs(train_fname)
+    if not os.path.exists(validation_fname):
+        os.makedirs(validation_fname)
+
+    if random_families:
+        p = np.random.permutation(total_examples)
+        i = 0
+        while i < len(p):
+            if i % 10000 == 0 and i > 0:
+                print("Generated ", i, " examples")
+
+            task_family = list()
+            for j in range(composition):
+                task_family.append(families[p[i] % n_families])
+                families_count[families[p[i] % n_families]] += 1
+
+            i += composition - 1  # subtract subtasks from task count
+
+            info = generate_compo_temporal_example(max_memory, max_distractors,
+                                                   task_family, composition)
+            # Write the example randomly to training or validation folder
+            split = bool(random.getrandbits(1))
+            if (split or validation_examples <= 0) and train_examples > 0:
+                train_examples -= 1
+                fname = os.path.join(train_fname, f'{i}')
+            else:
+                validation_examples -= 1
+                fname = os.path.join(validation_fname, f'{i}')
+
+            write_task_instance(fname, info, img_size)
+            i += 1
+    else:
+        pass
+    return families_count
+
+
 def main(argv):
     # go shape: point at last sth
 
@@ -129,19 +263,28 @@ def main(argv):
     max_memory = 12
     families = list(task_bank.task_family_dict.keys())
 
-    # test for single task, conversion etc
-    info = generate_temporal_example(max_memory, max_distractors, ['GoShapeOf'])
-    print(info.tasks[0])
+    # info = generate_temporal_example(max_memory, max_distractors, ['GoShape'])
+    # for i, frame in enumerate(sg.render(info.frame_info.objset)):
+    #     im = Image.fromarray(frame, 'RGB')
+    #     im.save(f'image{i}.png')
+    #     im.show()
 
-    print(info.get_examples()[0]['answers'])
-    print(info.frame_info.objset)
+    # print(info.get_examples()[0]['answers'])
+    # print(info.frame_info.objset)
+    # for frame in info.frame_info:
+    #     print(frame)
     # sg.render(info.frame_info.objset, save_name='cog.avi')
 
-    # compo_info = generate_compo_temporal_example(max_memory, max_distractors, 2)
-    # print(compo_info)
-    # for f in compo_info.frame_info:
-    #     print(f)
-    # sg.render(compo_info.frame_info.objset, save_name='cog.avi')
+    start = timeit.default_timer()
+
+    generate_dataset(max_memory, max_distractors,
+                     2000, '/Users/markbai/Documents/School/COMP 402/COG_v2/data',
+                     composition=2)
+
+    stop = timeit.default_timer()
+
+    print('Time: ', stop - start)
+
 
 if __name__ == '__main__':
     tf.app.run(main)
