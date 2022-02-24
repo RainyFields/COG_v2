@@ -24,11 +24,10 @@ import string
 import numpy as np
 
 AVG_MEM = 4
-MAX_MEMORY = 3
+MAX_MEMORY = 4
 LASTMAP = {}
 for k in range(MAX_MEMORY+1):
     LASTMAP["last%d"%(k)] = k
-print(LASTMAP)
 
 ALLWHENS = []
 for k in range(MAX_MEMORY+1):
@@ -79,9 +78,9 @@ ALLCOLORS = ['red', 'green', 'blue', 'yellow', 'purple', 'orange']
 ALLSHAPES = ['circle', 'square', 'cross', 'triangle', 'vbar', 'hbar']
 
 # Comment out the following to use a smaller set of colors and shapes
-ALLCOLORS += [
-    'cyan', 'magenta', 'lime', 'pink', 'teal', 'lavender', 'brown', 'beige',
-    'maroon', 'mint', 'olive', 'coral', 'navy', 'grey', 'white']
+# ALLCOLORS += [
+#     'cyan', 'magenta', 'lime', 'pink', 'teal', 'lavender', 'brown', 'beige',
+#     'maroon', 'mint', 'olive', 'coral', 'navy', 'grey', 'white']
 ALLSHAPES += list(string.ascii_lowercase)
 
 ALLCOLORSHAPES = [x for x in itertools.product(ALLCOLORS, ALLSHAPES)]

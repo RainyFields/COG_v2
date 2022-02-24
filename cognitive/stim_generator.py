@@ -71,8 +71,11 @@ class Attribute(object):
         return True
 
     def __hash__(self):
-        """Override the default hash behavior."""
-        return hash(tuple(sorted(self.__dict__.items())))
+        return hash(self.value)
+
+    # def __hash__(self):
+    #     """Override the default hash behavior."""
+    #     return hash(tuple(sorted(self.__dict__.items())))
 
     def resample(self):
         raise NotImplementedError('Abstract method.')
@@ -324,6 +327,17 @@ class Object(object):
             str(self.deletable)
         ])
 
+    def compare_attrs(self, other, attrs = None):
+        if attrs is None:
+            attrs = ['color', 'shape', 'when']
+        if isinstance(other, Object):
+            for attr in attrs:
+                if getattr(self, attr) != getattr(other, attr):
+                    return False
+            return True
+        else:
+            raise ValueError()
+
     def dump(self):
         """Returns representation of self suitable for dumping as json."""
         return {
@@ -387,6 +401,14 @@ class ObjectSet(object):
         self.dict = defaultdict(list)  # key: epoch, value: list of obj
 
         self.last_added_obj = None  # Last added object
+
+    def copy(self):
+        copy = ObjectSet(self.n_epoch, self.n_max_backtrack)
+        copy.set = self.set.copy()
+        copy.end_epoch = self.end_epoch.copy()
+        copy.dict = self.dict.copy()
+        copy.last_added_obj = self.last_added_obj
+        return copy
 
     def __iter__(self):
         return self.set.__iter__()
@@ -792,14 +814,16 @@ def save_movie(movie, fname, t_total):
       fname: str, file name to be saved
       t_total: total time length of the video in unit second
     """
+    print('Saving movie...')
     movie = movie.astype(np.uint8)
     # opencv interprets color channels as (B, G, R), so flip channel order
     movie = movie[..., ::-1]
     img_size = movie.shape[1]
     n_frame = len(movie)
+    fourcc = cv2.VideoWriter_fourcc(*'MPEG')
     # filename, FOURCC (video code) (MJPG works), frame/second, framesize
     writer = cv2.VideoWriter(fname,
-                             cv2.VideoWriter_fourcc(*'MJPG'),
+                             fourcc,
                              int(n_frame / t_total), (img_size, img_size))
 
     for frame in movie:
@@ -862,6 +886,16 @@ def random_attr(attr_type):
         raise NotImplementedError('Unknown attr_type :' + str(attr_type))
 
 
+def random_loc(n=1):
+    locs = list()
+    for i in range(n):
+        loc = random_attr('loc')
+        while loc in locs:
+            loc = random_attr('loc')
+        locs.append(loc)
+    return locs
+
+
 def random_space():
     return random.choice(const.ALLSPACES)
 
@@ -905,6 +939,10 @@ def random_when(seed=None):
     """
     np.random.seed(seed=seed)
     return np.random.choice(const.ALLWHENS, p=const.ALLWHENS_PROB)
+
+
+def sample_when(n=1, seed=None):
+    return sorted([random_when(seed) for i in range(n)])
 
 
 def n_random_when():

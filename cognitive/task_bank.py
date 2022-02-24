@@ -33,73 +33,56 @@ FLAGS = tf.app.flags.FLAGS
 
 tf.app.flags.DEFINE_string('task_family', 'all', 'name of the task to be trained')
 
-GLOBAL_SEED = 9
-
-class ExistShapeOf(Task):
-    """Check if exist object with shape of a colored object."""
-
-    def __init__(self):
-        color1, color2 = sg.sample_color(2)
-        objs1 = tg.Select(color=color1, when=sg.random_when())
-        shape1 = tg.GetShape(objs1)
-        objs2 = tg.Select(color=color2, shape=shape1, when='now')
-        self._operator = tg.Exist(objs2)
-        self.n_frames = 4
-
-    @property
-    def instance_size(self):
-        return sg.n_sample_color(2) * sg.n_random_when()
+GLOBAL_SEED = None
 
 
-class GoShape(Task):
+class GoShapeTemporal(TemporalTask):
     """Go to shape X."""
 
     def __init__(self, select_op_set=None):
+        super(GoShapeTemporal, self).__init__()
         self.select_collection = []
         shape1 = sg.random_shape()
         when1 = sg.random_when()
         objs1 = tg.Select(shape=shape1, when=when1)
         inherent_attr = {"shape": shape1,
-                         "when":when1}
-
+                         "when": when1}
 
         self._operator = tg.Go(objs1)
-        select_tuple = (when1, inherent_attr, objs1, self._operator, "Go")
+        select_tuple = [when1, inherent_attr, objs1, self._operator, "Go"]
         self.select_collection.append(select_tuple)
 
-        ### todo: make it simple and consistent with others
-        self.n_frames = const.LASTMAP[when1] + 1
+        self.n_frames = const.compare_when([when1]) + 1
 
         # update epoch index
         for select_op in self.select_collection:
             select_op[0] = self.n_frames - 1 - const.ALLWHENS.index(select_op[0])
 
-    ##### todo: maybe move it to Task class? how to deal with self._operator?
-    def reinit(self, select_epoch_index, restrictions):
-        for i, epoch_index in enumerate(select_epoch_index):
-            select_index = self.op_index(epoch_index,)
-            # update inherent attributes based on restrictions
-            self.select_collection[select_index][2].update(self.select_collection[select_index][1],restrictions[i])
-            # update _operator
-            if self.select_collection[select_index][4] == "Go":
-                self.select_collection[select_index][3] = tg.Go(self.select_collection[select_index][2])
-
-    def op_index(self, epoch_index):
-        for i, select_op in enumerate(self.select_collection):
-            if epoch_index == select_op[0]:
-                return i
-        return "no select operator is found"
+    # def reinit(self, select_epoch_index, restrictions):
+    #     for i, epoch_index in enumerate(select_epoch_index):
+    #         select_index = self.op_index(epoch_index, )
+    #         # update inherent attributes based on restrictions
+    #         self.select_collection[select_index][2].update(self.select_collection[select_index][1], restrictions[i])
+    #         # update _operator
+    #         if self.select_collection[select_index][4] == "Go":
+    #             self.select_collection[select_index][3] = tg.Go(self.select_collection[select_index][2])
+    #
+    # def op_index(self, epoch_index):
+    #     for i, select_op in enumerate(self.select_collection):
+    #         if epoch_index == select_op[0]:
+    #             return i
+    #     return "no select operator is found"
 
     @property
     def instance_size(self):
         return sg.n_random_shape() * sg.n_random_when()
 
 
-class GoShapeTemporal(TemporalTask):
+class GoShape(TemporalTask):
     """Go to shape X."""
 
-    def __init__(self, n_frames):
-        super(GoShapeTemporal, self).__init__(n_frames)
+    def __init__(self):
+        super(GoShape, self).__init__()
         shape1 = sg.random_shape()
         when1 = sg.random_when()
         objs1 = tg.Select(shape=shape1, when=when1)
@@ -116,33 +99,157 @@ class GoShapeTemporal(TemporalTask):
 class ExistShapeOfTemporal(TemporalTask):
     """Check if exist object with shape of a colored object."""
 
-    def __init__(self, n_frames):
+    def __init__(self):
         super(ExistShapeOfTemporal, self).__init__()
         color1, color2 = sg.sample_color(2)
-        when1 = sg.random_when()
+        when1, when2 = sg.sample_when(2)
         objs1 = tg.Select(color=color1, when=when1)
         shape1 = tg.GetShape(objs1)
-        when2 = 'last0'
         objs2 = tg.Select(color=color2, shape=shape1, when=when2)
         self._operator = tg.Exist(objs2)
-        # TODO: compare when with const.LASTMAP
-        self.n_frames = const.compare_when([when1,when2]) + 1
+        self.n_frames = const.compare_when([when1, when2]) + 1
 
     @property
     def instance_size(self):
         return sg.n_sample_color(2) * sg.n_random_when()
 
 
-class GoShapeTemporalComposite(tg.TemporalCompositeTask):
-    def __init__(self, n_tasks):
-        tasks = [GoShapeTemporal() for i in range(n_tasks)]
-        super(GoShapeTemporalComposite, self).__init__(tasks)
-        self.n_frames = sum([task.n_frames for task in tasks])
+class GoColorOfTemporal(TemporalTask):
+    """Go to shape 1 with the same color as shape 2.
+  
+    In general, this task can be extremely difficult, requiring memory of
+    locations of all latest shape 2 of different colors.
+  
+    To make this task reasonable, we use customized generate_objset.
+  
+    Returns:
+      task: task
+    """
+
+    def __init__(self):
+        super(GoColorOfTemporal, self).__init__()
+        shape1, shape2, shape3 = sg.sample_shape(3)
+        # when1 = 'last%d' % (const.LASTMAP[sg.random_when(GLOBAL_SEED)] + 4)
+        when1 = sg.random_when(GLOBAL_SEED)
+        objs1 = tg.Select(shape=shape1, when=when1)
+        color1 = tg.GetColor(objs1)
+        objs2 = tg.Select(color=color1, shape=shape2, when='last0')
+        self._operator = tg.Go(objs2)
+        self._shape1, self._shape2, self._shape3, self._color1 = shape1, shape2, shape3, color1
+        self.n_frames = const.compare_when([when1]) + 1
+
+    def generate_objset(self, n_distractor=0, average_memory_span=3):
+        objset = super(GoColorOfTemporal, self).generate_objset(n_distractor, average_memory_span)
+        obj = next(iter(objset))
+        shape = random.choice([self._shape1, self._shape2, self._shape3])
+        test2 = sg.Object([shape, sg.another_color(obj.color)], when='last0')
+        objset.add(test2, epoch_now=self.n_frames - 1)
+        return objset
+
+    @property
+    def instance_size(self):
+        return sg.n_sample_shape(3)
+
+
+class GoShapeOfTemporal(TemporalTask):
+    """Go to color 1 with the same shape as color 2."""
+
+    def __init__(self):
+        super(GoShapeOfTemporal, self).__init__()
+        color1, color2, color3 = sg.sample_color(3)
+        # when1 = 'last%d' % (const.LASTMAP[sg.random_when(GLOBAL_SEED)] + 4)
+        when1 = sg.random_when(GLOBAL_SEED)
+        objs1 = tg.Select(color=color1, when=when1)
+        shape1 = tg.GetShape(objs1)
+        objs2 = tg.Select(color=color2, shape=shape1, when='last0')
+        self._operator = tg.Go(objs2)
+        self._color1, self._color2, self._color3 = color1, color2, color3
+        self.n_frames = const.compare_when([when1]) + 1
+
+    def generate_objset(self, n_distractor=0, average_memory_span=3):
+        objset = super(GoShapeOfTemporal, self).generate_objset(n_distractor, average_memory_span)
+        obj = next(iter(objset))
+        color = random.choice([self._color1, self._color2, self._color3])
+        test2 = sg.Object([color, sg.another_shape([obj.shape])], when='last0')
+        objset.add(test2, epoch_now=self.n_frames - 1)
+        return objset
+
+    @property
+    def instance_size(self):
+        return sg.n_sample_color(3)
+
+
+class CompareColorTemporal(TemporalTask):
+    """Compare color between two objects."""
+
+    def __init__(self):
+        super(CompareColorTemporal, self).__init__()
+        shape1, shape2 = sg.sample_shape(2)
+        when1 = sg.random_when()
+        objs1 = tg.Select(shape=shape1, when=when1)
+        objs2 = tg.Select(shape=shape2, when='last0')
+        a1 = tg.GetColor(objs1)
+        a2 = tg.GetColor(objs2)
+        self._operator = tg.IsSame(a1, a2)
+        self.n_frames = const.compare_when([when1, 'last0']) + 1
+
+    @property
+    def instance_size(self):
+        return sg.n_sample_shape(2) * (sg.n_random_when()) ** 2
+
+
+class CompareShapeTemporal(TemporalTask):
+    """Compare shape between two objects."""
+
+    def __init__(self):
+        super(CompareShapeTemporal, self).__init__()
+        color1, color2 = sg.sample_color(2)
+        when1, when2 = sg.sample_when(2)
+        objs1 = tg.Select(color=color1, when=when1)
+        objs2 = tg.Select(color=color2, when=when2)
+        a1 = tg.GetShape(objs1)
+        a2 = tg.GetShape(objs2)
+        self._operator = tg.IsSame(a1, a2)
+        self.n_frames = const.compare_when([when1, when2]) + 1
+
+    @property
+    def instance_size(self):
+        return sg.n_sample_color(2) * (sg.n_random_when()) ** 2
+
+
+class CompareLocTemporal(TemporalTask):
+    """Compare color between two objects."""
+
+    # TODO: fix
+    def __init__(self):
+        super(CompareLocTemporal, self).__init__()
+        when1, when2 = sg.sample_when(2)
+        objs1 = tg.Select(when=when1)
+        objs2 = tg.Select(when=when2)
+        a1 = tg.GetLoc(objs1)
+        a2 = tg.GetLoc(objs2)
+        self._operator = tg.IsSame(a1, a2)
+        self.n_frames = const.compare_when([when1, when2]) + 1
+
+    @property
+    def instance_size(self):
+        return sg.n_sample_shape(2) * (sg.n_random_when()) ** 2
+
+
+# class GoShapeTemporalComposite(tg.TemporalCompositeTask):
+#     def __init__(self, n_tasks):
+#         tasks = [GoShapeTemporal() for i in range(n_tasks)]
+#         super(GoShapeTemporalComposite, self).__init__(tasks)
+#         self.n_frames = sum([task.n_frames for task in tasks])
 
 
 task_family_dict = OrderedDict([
-    ('GoShape', GoShape),
-    ('ExistShapeOf', ExistShapeOf)
+    ('GoShape', GoShapeTemporal),
+    ('ExistShapeOf', ExistShapeOfTemporal),
+    ('GoShapeOf', GoShapeOfTemporal),
+    ('GoColorOf', GoColorOfTemporal),
+    ('CompareShape', CompareShapeTemporal),
+    ('CompareColor', CompareColorTemporal)
 ])
 
 
