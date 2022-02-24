@@ -80,7 +80,6 @@ def generate_temporal_example(max_memory, max_distractors, task_family):
                                       average_memory_span=avg_mem)
     # Getting targets can remove some objects from objset.
     # Create example fields after this call.
-    targets = task.get_target(objset)
 
     frame_info = ig.FrameInfo(task, objset)
     compo_info = ig.TaskInfoCompo(task, frame_info)
@@ -99,15 +98,12 @@ def generate_compo_temporal_example(max_memory, max_distractors, families, n_tas
     if n_tasks == 1:
         return generate_temporal_example(max_memory, max_distractors, families)
 
-    compo_tasks = []
-    for i in range(n_tasks):
-        info = generate_temporal_example(max_memory, max_distractors, families)
-        compo_tasks.append(info)
+    compo_tasks = [generate_temporal_example(max_memory, max_distractors, families) for _ in range(n_tasks)]
 
     # temporal combination
     cur_task = compo_tasks[0]
     for task in compo_tasks[1:]:
-        cur_task.merge(task, reuse=0)
+        cur_task.merge(task, reuse=1)
     return cur_task
 
 
@@ -189,17 +185,15 @@ def write_task_instance(fname, task_info, img_size):
         filename = os.path.join(fname, f'task{i} example')
         with open(filename, 'w') as f:
             json.dump(task_example, f, indent=4)
+    filename = os.path.join(fname, 'compo_task example')
+    with open(filename, 'w') as f:
+        json.dump(task_info.get_compo_example(), f, indent=4)
 
 
 def generate_dataset(max_memory, max_distractors,
                      examples_per_family, output_dir,
                      random_families=True, composition=1,
                      img_size=224, train=0.7, validation=0.3):
-    # TODO: training: 70% validation: 30%
-    # 1 folder for each instance
-    # save movie, no write movie, task_info (n_frames) json, task_instruction json
-    # see if movie np.array can be saved to images
-    # as many instances as possible, 2000 for each task
     if not random_families:
         assert composition == 1
     if not os.path.exists(output_dir):
@@ -263,11 +257,7 @@ def main(argv):
     max_memory = 12
     families = list(task_bank.task_family_dict.keys())
 
-    # info = generate_temporal_example(max_memory, max_distractors, ['GoShape'])
-    # for i, frame in enumerate(sg.render(info.frame_info.objset)):
-    #     im = Image.fromarray(frame, 'RGB')
-    #     im.save(f'image{i}.png')
-    #     im.show()
+    info = generate_compo_temporal_example(max_memory, max_distractors, families, 2)
 
     # print(info.get_examples()[0]['answers'])
     # print(info.frame_info.objset)
@@ -278,7 +268,7 @@ def main(argv):
     start = timeit.default_timer()
 
     generate_dataset(max_memory, max_distractors,
-                     2000, '/Users/markbai/Documents/School/COMP 402/COG_v2/data',
+                     20, '/Users/markbai/Documents/School/COMP 402/COG_v2/data/debug',
                      composition=2)
 
     stop = timeit.default_timer()

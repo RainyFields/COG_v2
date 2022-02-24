@@ -23,6 +23,8 @@ from __future__ import division
 from __future__ import print_function
 
 from collections import defaultdict
+from typing import List
+
 import numpy as np
 import random
 
@@ -244,10 +246,12 @@ class TemporalTask(Task):
     def instance_size(self):
         pass
 
-    def __init__(self, n_frames=None, operator=None, first_shareable=None):
+    def __init__(self, operator=None, n_frames=None, first_shareable=None):
         super(TemporalTask, self).__init__(operator)
         self.n_frames = n_frames
         self._first_shareable = first_shareable
+        self.n_distractors = None
+        self.avg_mem = None
 
     @property
     def first_shareable(self, seed=None):
@@ -263,10 +267,41 @@ class TemporalTask(Task):
             self._first_shareable = np.random.choice(np.arange(0, self.n_frames + 1))
         return self._first_shareable
 
-    def reinit(self):
-        pass
+    def reinit(self, objs: List[sg.Object]):
+        '''
+        :return: True if reinit is successful, false otherwise
+        '''
+        assert all([o.when == objs[0].when for o in objs])
 
-    def generate_objset(self, n_distractor=0, average_memory_span=2):
+        nodes = self.topological_sort()
+        selects = [node for node in nodes if isinstance(node, Select)]
+        # find all selects that are leaves in the operator graph with the same when as the objects
+        filter_select = [s for s in selects if self.check_attrs(s) and s.when == objs[0].when]
+
+        # check if there are not enough objects
+        if len(objs) < len(filter_select):
+            return False
+
+        if filter_select:
+            filter_objs = random.sample(objs, k=len(filter_select))
+            for select, obj in zip(filter_select, filter_objs):
+                try:
+                    if not select.update(obj):
+                        return False
+                except ValueError:
+                    return False
+            return True
+        return False
+
+    @staticmethod
+    def check_attrs(select):
+        for attr_type in ['loc', 'color', 'shape']:
+            a = getattr(select, attr_type)
+            if isinstance(a, Operator):
+                return False
+        return True
+
+    def generate_objset(self, n_distractor=0, average_memory_span=3):
         """Guess objset for all n_epoch.
 
         Mathematically, the average_memory_span is n_max_backtrack/3
@@ -279,6 +314,8 @@ class TemporalTask(Task):
         Returns:
           objset: full objset for all n_epoch
         """
+        self.n_distractors = n_distractor
+        self.avg_mem = average_memory_span
         n_epoch = self.n_frames
         n_max_backtrack = int(average_memory_span * 3)  ### why do this convertion? waste of time?
         objset = sg.ObjectSet(n_epoch=n_epoch, n_max_backtrack=n_max_backtrack)
@@ -452,18 +489,12 @@ class Select(Operator):
 
         return subset
 
-    def update(self, inh_attr, restrictions, ):
-        for attr in inh_attr:
-            if attr == "loc":
-                self.loc = restrictions[attr]
-            elif attr == "color":
-                self.color = restrictions[attr]
-            elif attr == "when":
-                self.color = restrictions[attr]
-            elif attr == "shape":
-                self.shape = restrictions[attr]
-            else:
-                raise ValueError("invalid attribute")
+    def update(self, obj: sg.Object):
+        assert self.when == obj.when
+        self.color = obj.color
+        self.shape = obj.shape
+
+        return True
 
     def get_expected_input(self, should_be, objset, epoch_now):
         """Guess objset for Select operator.
@@ -1037,27 +1068,3 @@ class And(Operator):
                 op1_assign, op2_assign = False, False
 
         return op1_assign, op2_assign
-
-
-def generate_objset(task, n_epoch=30, distractor=True):
-    objset = sg.ObjectSet(n_epoch=n_epoch)
-
-    # Guess objects
-    for epoch_now in range(n_epoch):
-        if distractor:
-            objset.add(sg.Object(when='last0', deletable=True), epoch_now)
-        objset = task.get_expected_input(objset, epoch_now)
-        break
-    return objset
-
-
-def get_target_value(t):
-    # Convert target t to string and convert True/False target values
-    # to lower case strings for consistency with other uses of true/false
-    # in vocabularies.
-    t = t.value if hasattr(t, 'value') else str(t)
-    if t is True or t == 'True':
-        return 'true'
-    if t is False or t == 'False':
-        return 'false'
-    return t

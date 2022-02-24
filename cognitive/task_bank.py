@@ -58,21 +58,20 @@ class GoShapeTemporal(TemporalTask):
         for select_op in self.select_collection:
             select_op[0] = self.n_frames - 1 - const.ALLWHENS.index(select_op[0])
 
-    ##### todo: maybe move it to Task class? how to deal with self._operator?
-    def reinit(self, select_epoch_index, restrictions):
-        for i, epoch_index in enumerate(select_epoch_index):
-            select_index = self.op_index(epoch_index, )
-            # update inherent attributes based on restrictions
-            self.select_collection[select_index][2].update(self.select_collection[select_index][1], restrictions[i])
-            # update _operator
-            if self.select_collection[select_index][4] == "Go":
-                self.select_collection[select_index][3] = tg.Go(self.select_collection[select_index][2])
-
-    def op_index(self, epoch_index):
-        for i, select_op in enumerate(self.select_collection):
-            if epoch_index == select_op[0]:
-                return i
-        return "no select operator is found"
+    # def reinit(self, select_epoch_index, restrictions):
+    #     for i, epoch_index in enumerate(select_epoch_index):
+    #         select_index = self.op_index(epoch_index, )
+    #         # update inherent attributes based on restrictions
+    #         self.select_collection[select_index][2].update(self.select_collection[select_index][1], restrictions[i])
+    #         # update _operator
+    #         if self.select_collection[select_index][4] == "Go":
+    #             self.select_collection[select_index][3] = tg.Go(self.select_collection[select_index][2])
+    #
+    # def op_index(self, epoch_index):
+    #     for i, select_op in enumerate(self.select_collection):
+    #         if epoch_index == select_op[0]:
+    #             return i
+    #     return "no select operator is found"
 
     @property
     def instance_size(self):
@@ -103,10 +102,9 @@ class ExistShapeOfTemporal(TemporalTask):
     def __init__(self):
         super(ExistShapeOfTemporal, self).__init__()
         color1, color2 = sg.sample_color(2)
-        when1 = sg.random_when()
+        when1, when2 = sg.sample_when(2)
         objs1 = tg.Select(color=color1, when=when1)
         shape1 = tg.GetShape(objs1)
-        when2 = 'last0'
         objs2 = tg.Select(color=color2, shape=shape1, when=when2)
         self._operator = tg.Exist(objs2)
         self.n_frames = const.compare_when([when1, when2]) + 1
@@ -140,49 +138,13 @@ class GoColorOfTemporal(TemporalTask):
         self._shape1, self._shape2, self._shape3, self._color1 = shape1, shape2, shape3, color1
         self.n_frames = const.compare_when([when1]) + 1
 
-    def generate_objset(self, n_distractor=0, average_memory_span=2):
-        objset = super(GoColorOfTemporal, self).generate_objset()
+    def generate_objset(self, n_distractor=0, average_memory_span=3):
+        objset = super(GoColorOfTemporal, self).generate_objset(n_distractor, average_memory_span)
         obj = next(iter(objset))
         shape = random.choice([self._shape1, self._shape2, self._shape3])
         test2 = sg.Object([shape, sg.another_color(obj.color)], when='last0')
         objset.add(test2, epoch_now=self.n_frames - 1)
         return objset
-
-    # def generate_objset(self, n_distractor=1, average_memory_span=2):
-    #     """Generate object set.
-    #
-    #     The task has 4 epochs: Fixation, Sample, Delay, and Test.
-    #     During sample, one sample object is shown.
-    #     During test, two test objects are shown, one of them will match the color
-    #     of the sample object
-    #
-    #     Args:
-    #       n_epoch: int
-    #
-    #     Returns:
-    #       objset: ObjectSet instance.
-    #
-    #     Raises:
-    #       ValueError: when n_epoch is less than 4,
-    #           the minimum epoch number for this task
-    #     """
-    #     if self.n_frames < 4:
-    #         raise ValueError('Number of epoch {:d} is less than 4'.format(self.n_frames))
-    #     color1, color2 = sg.sample_color(2)
-    #     color3 = sg.random_color()
-    #
-    #     objset = sg.ObjectSet(n_epoch=self.n_frames)
-    #
-    #     sample1 = sg.Object([color1, self._shape1], when='last0')
-    #     distractor1 = sg.Object([color3, self._shape3], when='last0')
-    #     test1 = sg.Object([color1, self._shape2], when='last0')
-    #     test2 = sg.Object([color2, self._shape2], when='last0')
-    #
-    #     objset.add(sample1, epoch_now=1)  # sample epoch
-    #     objset.add(distractor1, epoch_now=2)  # delay epoch
-    #     objset.add(test1, epoch_now=3)  # test epoch
-    #     objset.add(test2, epoch_now=3)  # test epoch
-    #     return objset
 
     @property
     def instance_size(self):
@@ -204,33 +166,13 @@ class GoShapeOfTemporal(TemporalTask):
         self._color1, self._color2, self._color3 = color1, color2, color3
         self.n_frames = const.compare_when([when1]) + 1
 
-    def generate_objset(self, n_distractor=0, average_memory_span=2):
-        objset = super(GoShapeOfTemporal, self).generate_objset()
+    def generate_objset(self, n_distractor=0, average_memory_span=3):
+        objset = super(GoShapeOfTemporal, self).generate_objset(n_distractor, average_memory_span)
         obj = next(iter(objset))
         color = random.choice([self._color1, self._color2, self._color3])
         test2 = sg.Object([color, sg.another_shape([obj.shape])], when='last0')
         objset.add(test2, epoch_now=self.n_frames - 1)
         return objset
-
-    # def generate_objset(self, n_distractor=1, average_memory_span=2):
-    #     """Generate object set."""
-    #     if self.n_frames < 4:
-    #         raise ValueError('Number of epoch {:d} is less than 4'.format(self.n_frames))
-    #     shape1, shape2 = sg.sample_shape(2)
-    #     shape3 = sg.random_shape()
-    #
-    #     objset = sg.ObjectSet(n_epoch=self.n_frames)
-    #
-    #     sample1 = sg.Object([self._color1, shape1], when='last0')
-    #     distractor1 = sg.Object([self._color3, shape3], when='last0')
-    #     test1 = sg.Object([self._color2, shape1], when='last0')
-    #     test2 = sg.Object([self._color2, shape2], when='last0')
-    #
-    #     objset.add(sample1, epoch_now=1)  # sample epoch
-    #     objset.add(distractor1, epoch_now=2)  # delay epoch
-    #     objset.add(test1, epoch_now=3)  # test epoch
-    #     objset.add(test2, epoch_now=3)  # test epoch
-    #     return objset
 
     @property
     def instance_size(self):
@@ -262,13 +204,13 @@ class CompareShapeTemporal(TemporalTask):
     def __init__(self):
         super(CompareShapeTemporal, self).__init__()
         color1, color2 = sg.sample_color(2)
-        when1 = sg.random_when()
+        when1, when2 = sg.sample_when(2)
         objs1 = tg.Select(color=color1, when=when1)
-        objs2 = tg.Select(color=color2, when='last0')
+        objs2 = tg.Select(color=color2, when=when2)
         a1 = tg.GetShape(objs1)
         a2 = tg.GetShape(objs2)
         self._operator = tg.IsSame(a1, a2)
-        self.n_frames = const.compare_when([when1,'last0']) + 1
+        self.n_frames = const.compare_when([when1, when2]) + 1
 
     @property
     def instance_size(self):
@@ -281,19 +223,17 @@ class CompareLocTemporal(TemporalTask):
     # TODO: fix
     def __init__(self):
         super(CompareLocTemporal, self).__init__()
-        when1 = sg.random_when()
-        when2 = sg.random_when()
+        when1, when2 = sg.sample_when(2)
         objs1 = tg.Select(when=when1)
-        objs2 = tg.Select(when='last0')
+        objs2 = tg.Select(when=when2)
         a1 = tg.GetLoc(objs1)
         a2 = tg.GetLoc(objs2)
         self._operator = tg.IsSame(a1, a2)
-        self.n_frames = const.compare_when([when1, 'last0']) + 1
+        self.n_frames = const.compare_when([when1, when2]) + 1
 
     @property
     def instance_size(self):
         return sg.n_sample_shape(2) * (sg.n_random_when()) ** 2
-
 
 
 # class GoShapeTemporalComposite(tg.TemporalCompositeTask):

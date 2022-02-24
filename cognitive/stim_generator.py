@@ -71,8 +71,11 @@ class Attribute(object):
         return True
 
     def __hash__(self):
-        """Override the default hash behavior."""
-        return hash(tuple(sorted(self.__dict__.items())))
+        return hash(self.value)
+
+    # def __hash__(self):
+    #     """Override the default hash behavior."""
+    #     return hash(tuple(sorted(self.__dict__.items())))
 
     def resample(self):
         raise NotImplementedError('Abstract method.')
@@ -324,6 +327,17 @@ class Object(object):
             str(self.deletable)
         ])
 
+    def compare_attrs(self, other, attrs = None):
+        if attrs is None:
+            attrs = ['color', 'shape', 'when']
+        if isinstance(other, Object):
+            for attr in attrs:
+                if getattr(self, attr) != getattr(other, attr):
+                    return False
+            return True
+        else:
+            raise ValueError()
+
     def dump(self):
         """Returns representation of self suitable for dumping as json."""
         return {
@@ -387,6 +401,14 @@ class ObjectSet(object):
         self.dict = defaultdict(list)  # key: epoch, value: list of obj
 
         self.last_added_obj = None  # Last added object
+
+    def copy(self):
+        copy = ObjectSet(self.n_epoch, self.n_max_backtrack)
+        copy.set = self.set.copy()
+        copy.end_epoch = self.end_epoch.copy()
+        copy.dict = self.dict.copy()
+        copy.last_added_obj = self.last_added_obj
+        return copy
 
     def __iter__(self):
         return self.set.__iter__()
