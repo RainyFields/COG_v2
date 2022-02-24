@@ -1,11 +1,8 @@
 import unittest
 
-from cognitive import constants as const
-from cognitive import stim_generator as sg
-
 
 class StimGeneratorTest(unittest.TestCase):
-    def Test(self):
+    def test(self):
         pass
 
 

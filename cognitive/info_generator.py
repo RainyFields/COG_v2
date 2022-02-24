@@ -1,3 +1,5 @@
+""" Classes for building composite tasks
+"""
 import numpy as np
 
 import cognitive.constants as const
@@ -24,14 +26,11 @@ class TaskInfoCompo(object):
         self.changed = list()
         if frame_info is None:
             print('Alert! Correct usage: generate frame_info first, then generate TaskInfoCompo')
-            try:
-                n_distractors = self.n_distractors
-                avg_mem = self.avg_mem
-            except ValueError:
-                n_distractors = None
-                avg_mem = None
-            objset = task.generate_objset(n_distractors, avg_mem)
-            frame_info = self.FrameInfo(task, objset)
+            if task.n_distractors is None or task.avg_mem is None:
+                objset = task.generate_objset()
+            else:
+                objset = task.generate_objset(task.n_distractors, task.avg_mem)
+            frame_info = FrameInfo(task, objset)
 
         self.task_objset[0] = frame_info.objset.copy()
         self.frame_info = frame_info
@@ -53,10 +52,10 @@ class TaskInfoCompo(object):
         }
 
     def get_examples(self):
-        '''
+        """
         get tasks examples
         :return: list of dictionaries containing information about the requested tasks
-        '''
+        """
         examples = list()
         # TODO: fix "answers" in cases of merged objset and task is changed
         # TODO: debug validation #7
@@ -78,11 +77,11 @@ class TaskInfoCompo(object):
         return len(self.frame_info)
 
     def get_changed_task_objset(self, changed_task):
-        '''
+        """
 
         :param changed_task:
         :return:
-        '''
+        """
 
         assert isinstance(changed_task, tg.TemporalTask)
         objset = changed_task.generate_objset(changed_task.n_distractors, changed_task.avg_mem)
@@ -97,12 +96,12 @@ class TaskInfoCompo(object):
         return objset
 
     def merge(self, new_task_info, reuse=None):
-        '''
+        """
         combine new task to the existing composite task
         :param reuse: probability of reusing visual stimuli from previous composite task
         :param new_task_info: TaskInfoCombo object
         :return: None if no change, and the new task if merge needed change
-        '''
+        """
         # TODO(mbai): change task instruction here
         # TODO: very specific task instruction (related to remembering, forgetting, etc)
         assert isinstance(new_task_info, TaskInfoCompo)
@@ -118,7 +117,6 @@ class TaskInfoCompo(object):
 
         curr_abs_idx = start
         changed = False
-        old_frames = new_task_info.frame_info.frame_list
         for i, (old_frame, new_frame) in enumerate(zip(self.frame_info[start:], new_task_info.frame_info)):
             # if there are no objects in the frame, then freely merge
             if not old_frame.objs or not new_frame.objs:
@@ -130,7 +128,7 @@ class TaskInfoCompo(object):
                 # reuse stimuli with probability reuse
                 if np.random.random() < reuse:  # use frame stimuli from previous task and reinit new task
                     # check how many selects and if there are enough objects for the selects
-                    if new_task.reinit(i, old_frame.objs):
+                    if new_task.reinit(old_frame.objs):
                         changed = True
                     else:
                         old_frame.compatible_merge(new_frame)
@@ -139,12 +137,13 @@ class TaskInfoCompo(object):
             curr_abs_idx += 1
         if changed:
             self.changed.append(new_task_idx)
-            self.task_objset[new_task_idx] = self.get_changed_task_objset(new_task_idx, new_task)
+            self.task_objset[new_task_idx] = self.get_changed_task_objset(new_task)
         else:
             self.task_objset[new_task_idx] = new_task_info.task_objset[0]
 
         self.tasks.append(new_task)
         # TODO: refactor by making updating functions
+
 
 class FrameInfo(object):
     def __init__(self, task, objset=None):
@@ -205,12 +204,12 @@ class FrameInfo(object):
         return self.frame_list.__getitem__(item)
 
     def add_new_frames(self, i, relative_tasks):
-        '''
+        """
         add new empty frames and update objset and p
         :param i: number of new frames
         :param relative_tasks: the tasks associated with the new frames
         :return:
-        '''
+        """
         if i <= 0:
             return
         for j in range(i):
@@ -221,7 +220,7 @@ class FrameInfo(object):
         self.objset.increase_epoch(self.objset.n_epoch + i)
 
     def get_start_frame(self, new_task_info, relative_tasks):
-        '''
+        """
         randomly sample a starting frame to start merging add new frames if needed
         check length of both, then starting first based on first_shareable
         sample from p, if start at the same frame, but new task ends earlier,
@@ -232,7 +231,7 @@ class FrameInfo(object):
         TaskInfoCompo
         :param new_task_info: TaskInfoCompo object of the new task
         :return: index of frame from existing frame_info
-        '''
+        """
         assert isinstance(new_task_info, TaskInfoCompo)
         assert len(new_task_info.tasks) == 1
         # if multiple tasks are shareable, then start from the last task

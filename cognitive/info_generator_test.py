@@ -1,9 +1,8 @@
 import unittest
 
-from cognitive import constants as const
 from cognitive import info_generator as ig
-from cognitive import task_bank as tb
 from cognitive import stim_generator as sg
+from cognitive import task_bank as tb
 from cognitive import task_generator as tg
 
 families = list(tb.task_family_dict.keys())

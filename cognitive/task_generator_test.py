@@ -19,15 +19,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import random
-import numpy as np
-from collections import defaultdict, OrderedDict
 import unittest
 
 from cognitive import constants as const
 from cognitive import stim_generator as sg
 from cognitive import task_generator as tg
-from cognitive import task_bank as tb
 
 
 def targets_to_str(targets):
@@ -45,10 +41,10 @@ class TaskGeneratorTest(unittest.TestCase):
             color1, color2 = sg.sample_color(2)
         when1 = sg.random_when()
 
-        object = sg.Object([color2, shape2], when=when1)
+        object1 = sg.Object([color2, shape2], when=when1)
         objs = tg.Select(shape=shape1, color=color1, when=when1)
 
-        objs.update(object)
+        objs.update(object1)
         self.assertTrue(objs.shape == shape2)
         self.assertTrue(objs.color == color2)
 
@@ -63,34 +59,35 @@ class TaskGeneratorTest(unittest.TestCase):
             whens = sg.sample_when(2)
             while len(whens) != len(set(whens)):
                 whens = sg.sample_when(3)
-            object = sg.Object([colors[2], shapes[2]], when=whens[1])
+            object1 = sg.Object([colors[2], shapes[2]], when=whens[1])
             op = tg.Select(color=colors[1], shape=shapes[1], when=whens[1])
             task1 = tg.TemporalTask(tg.GetShape(op))
-            task1.reinit([object])
+            task1.reinit([object1])
 
             self.assertTrue(op.shape == shapes[2])
             self.assertTrue(op.color == colors[2])
 
-            object = sg.Object([colors[1], shapes[1]], when=whens[1])
+            object1 = sg.Object([colors[1], shapes[1]], when=whens[1])
             op1 = tg.Select(color=colors[2], shape=shapes[2], when=whens[1])
             op2 = tg.Select(color=colors[0], shape=shapes[0], when=whens[1])
             task1 = tg.TemporalTask(tg.IsSame(tg.GetShape(op1), tg.GetShape(op2)))
-            self.assertFalse(task1.reinit([object]))
+            self.assertFalse(task1.reinit([object1]))
 
-            object = sg.Object([colors[1], shapes[1]], when=whens[1])
+            object1 = sg.Object([colors[1], shapes[1]], when=whens[1])
             op1 = tg.Select(color=colors[2], shape=shapes[2], when=whens[1])
             op2 = tg.Select(color=colors[0], shape=shapes[0], when=whens[0])
             task1 = tg.TemporalTask(tg.IsSame(tg.GetShape(op1), tg.GetShape(op2)))
-            self.assertTrue(task1.reinit([object]))
+            self.assertTrue(task1.reinit([object1]))
 
-            object = sg.Object([colors[2], shapes[2]], when=whens[1])
+            object1 = sg.Object([colors[2], shapes[2]], when=whens[1])
             op = tg.Select(color=colors[1], shape=shapes[1], when=whens[1])
             task1 = tg.TemporalTask(tg.GetShape(op))
             task1.n_frames = 2
-            task1.reinit([object])
+            task1.reinit([object1])
             objset = task1.generate_objset()
             target_values = [const.get_target_value(t) for t in task1.get_target(objset)]
-            self.assertEqual(object.shape.value, target_values[0])
+            self.assertEqual(object1.shape.value, target_values[0])
+
 
 if __name__ == '__main__':
     unittest.main()
