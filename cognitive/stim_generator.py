@@ -34,6 +34,9 @@ import itertools
 from bisect import bisect_left
 from collections import defaultdict
 import json
+import os
+from PIL import Image
+import pandas as pd
 import random
 import numpy as np
 import string
@@ -60,7 +63,9 @@ class Attribute(object):
 
     def __eq__(self, other):
         """Override the default Equals behavior."""
-        if isinstance(other, self.__class__):
+        if isinstance(other, str):
+            return self.value == other
+        elif isinstance(other, self.__class__):
             return self.value == other.value
         return False
 
@@ -161,7 +166,7 @@ class Loc(Attribute):
 class Space(Attribute):
     """Space class."""
 
-    def __init__(self, value):
+    def __init__(self, value=None):
         super(Space, self).__init__(value)
         if self.value is None:
             self._value = [(0, 1), (0, 1)]
@@ -327,7 +332,7 @@ class Object(object):
             str(self.deletable)
         ])
 
-    def compare_attrs(self, other, attrs = None):
+    def compare_attrs(self, other, attrs=None):
         if attrs is None:
             attrs = ['color', 'shape', 'when']
         if isinstance(other, Object):
@@ -644,6 +649,27 @@ class ObjectSet(object):
         return subset
 
 
+def get_shapenet_object(category, obj_size):
+    '''
+
+    :param obj_size: a tuple of desired size
+    :param category: the category of ShapeNet Object
+    :return: a resized ShapeNet Object of obj_size
+    '''
+    shapnet_path = os.path.join(const.dir_path, 'min_shapenet_easy_angle')
+    pickle_path = os.path.join(shapnet_path, 'train_min_shapenet_angle_easy_meta.pkl')
+    images_path = os.path.join(shapnet_path, 'org_shapenet/train')
+
+    df: pd.DataFrame = pd.read_pickle(pickle_path)
+    obj_cat: pd.DataFrame = df.loc[df['category'] == category]
+    assert len(obj_cat) > 0
+    obj_ref = int(obj_cat.sample(1)['ref'])
+
+    obj_path = os.path.join(images_path, f'{obj_ref}/image.png')
+    img = Image.open(obj_path).convert('RGB').resize(obj_size)
+    return img
+
+
 def render_static_obj(canvas, obj, img_size):
     """Render a single object.
 
@@ -653,48 +679,64 @@ def render_static_obj(canvas, obj, img_size):
       obj: StaticObject instance
       img_size: int, image size.
     """
-    # Fixed specifications
+    # Fixed specifications, see Space.sample()
+    # when sampling, the most top-left position is (0.1, 0.1),
+    # most bottom-right position is (0.9,0.9)
+    # TODO: change scaling (space.sample)
     radius = int(0.05 * img_size)
 
     # Note that OpenCV color is (Blue, Green, Red)
-    color = const.WORD2COLOR[obj.color]
-    shape = obj.shape
     center = (int(obj.loc[0] * img_size), int(obj.loc[1] * img_size))
-    if shape == 'circle':
-        cv2.circle(canvas, center, radius, color, -1)
-    elif shape == 'square':
-        cv2.rectangle(canvas, (center[0] - radius, center[1] - radius),
-                      (center[0] + radius, center[1] + radius), color, -1)
-    elif shape == 'cross':
-        thickness = int(0.02 * img_size)
-        cv2.line(canvas, (center[0] - radius, center[1]),
-                 (center[0] + radius, center[1]), color, thickness)
-        cv2.line(canvas, (center[0], center[1] - radius),
-                 (center[0], center[1] + radius), color, thickness)
-    elif shape == 'triangle':
-        r1 = int(0.08 * img_size)
-        r2 = int(0.04 * img_size)
-        r3 = int(0.069 * img_size)
-        pts = np.array([(center[0], center[1] - r1),
-                        (center[0] - r3, center[1] + r2), (center[0] + r3,
-                                                           center[1] + r2)])
-        cv2.fillConvexPoly(canvas, pts, color)
-    elif shape == 'vbar':
-        r1 = int(0.5 * radius)
-        r2 = int(1.2 * radius)
-        cv2.rectangle(canvas, (center[0] - r1, center[1] - r2),
-                      (center[0] + r1, center[1] + r2), color, -1)
-    elif shape == 'hbar':
-        r1 = int(1.2 * radius)
-        r2 = int(0.5 * radius)
-        cv2.rectangle(canvas, (center[0] - r1, center[1] - r2),
-                      (center[0] + r1, center[1] + r2), color, -1)
-    elif shape in string.ascii_letters:
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        # Shift x and y by -3 and 5 respectively to center the character
-        cv2.putText(canvas, shape, (center[0] - 3, center[1] + 5), font, 0.5, color, 2)
+
+    shape = obj.shape
+    if shape in const.ALLOBJECTS:
+        x_offset, x_end = center[0] - radius, center[0] + radius
+        y_offset, y_end = center[1] - radius, center[1] + radius
+        shape_net_obj = get_shapenet_object(shape, [radius * 2, radius * 2])
+        canvas[x_offset:x_end, y_offset:y_end] = shape_net_obj
     else:
-        raise NotImplementedError('Unknown shape ' + str(shape))
+        if obj.color is None:
+            x_offset, x_end = center[0] - radius, center[0] + radius
+            y_offset, y_end = center[1] - radius, center[1] + radius
+            shape_net_obj = get_shapenet_object(shape, [radius * 2, radius * 2])
+            canvas[x_offset:x_end, y_offset:y_end] = shape_net_obj
+        else:
+            color = const.WORD2COLOR[obj.color]
+            if shape == 'circle':
+                cv2.circle(canvas, center, radius, color, -1)
+            elif shape == 'square':
+                cv2.rectangle(canvas, (center[0] - radius, center[1] - radius),
+                              (center[0] + radius, center[1] + radius), color, -1)
+            elif shape == 'cross':
+                thickness = int(0.02 * img_size)
+                cv2.line(canvas, (center[0] - radius, center[1]),
+                         (center[0] + radius, center[1]), color, thickness)
+                cv2.line(canvas, (center[0], center[1] - radius),
+                         (center[0], center[1] + radius), color, thickness)
+            elif shape == 'triangle':
+                r1 = int(0.08 * img_size)
+                r2 = int(0.04 * img_size)
+                r3 = int(0.069 * img_size)
+                pts = np.array([(center[0], center[1] - r1),
+                                (center[0] - r3, center[1] + r2), (center[0] + r3,
+                                                                   center[1] + r2)])
+                cv2.fillConvexPoly(canvas, pts, color)
+            elif shape == 'vbar':
+                r1 = int(0.5 * radius)
+                r2 = int(1.2 * radius)
+                cv2.rectangle(canvas, (center[0] - r1, center[1] - r2),
+                              (center[0] + r1, center[1] + r2), color, -1)
+            elif shape == 'hbar':
+                r1 = int(1.2 * radius)
+                r2 = int(0.5 * radius)
+                cv2.rectangle(canvas, (center[0] - r1, center[1] - r2),
+                              (center[0] + r1, center[1] + r2), color, -1)
+            elif shape in string.ascii_letters:
+                font = cv2.FONT_HERSHEY_SIMPLEX
+                # Shift x and y by -3 and 5 respectively to center the character
+                cv2.putText(canvas, shape, (center[0] - 3, center[1] + 5), font, 0.5, color, 2)
+            else:
+                raise NotImplementedError
 
 
 def render_obj(canvas, obj, img_size):

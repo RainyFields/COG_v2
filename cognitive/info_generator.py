@@ -100,7 +100,7 @@ class TaskInfoCompo(object):
         combine new task to the existing composite task
         :param reuse: probability of reusing visual stimuli from previous composite task
         :param new_task_info: TaskInfoCombo object
-        :return: None if no change, and the new task if merge needed change
+        :return: None True if reuse, False if no reuse
         """
         # TODO(mbai): change task instruction here
         # TODO: very specific task instruction (related to remembering, forgetting, etc)
@@ -120,13 +120,10 @@ class TaskInfoCompo(object):
         for i, (old_frame, new_frame) in enumerate(zip(self.frame_info[start:], new_task_info.frame_info)):
             # if there are no objects in the frame, then freely merge
             if not old_frame.objs or not new_frame.objs:
-                try:
-                    old_frame.compatible_merge(new_frame)  # always update frame descriptions
-                except:
-                    continue
+                old_frame.compatible_merge(new_frame)  # always update frame descriptions
             else:
                 # reuse stimuli with probability reuse
-                if np.random.random() < reuse:  # use frame stimuli from previous task and reinit new task
+                if np.random.random() < reuse:
                     # check how many selects and if there are enough objects for the selects
                     if new_task.reinit(old_frame.objs):
                         changed = True

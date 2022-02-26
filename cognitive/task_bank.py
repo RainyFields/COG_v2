@@ -102,7 +102,8 @@ class ExistShapeOfTemporal(TemporalTask):
     def __init__(self):
         super(ExistShapeOfTemporal, self).__init__()
         color1, color2 = sg.sample_color(2)
-        when1, when2 = sg.sample_when(2)
+        when1 = sg.random_when()
+        when2 = 'last0'
         objs1 = tg.Select(color=color1, when=when1)
         shape1 = tg.GetShape(objs1)
         objs2 = tg.Select(color=color2, shape=shape1, when=when2)

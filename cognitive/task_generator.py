@@ -276,7 +276,7 @@ class TemporalTask(Task):
         nodes = self.topological_sort()
         selects = [node for node in nodes if isinstance(node, Select)]
         # find all selects that are leaves in the operator graph with the same when as the objects
-        filter_select = [s for s in selects if self.check_attrs(s) and s.when == objs[0].when]
+        filter_select = [s for s in selects if self.check_attrs(s)]
 
         # check if there are not enough objects
         if len(objs) < len(filter_select):
@@ -490,10 +490,9 @@ class Select(Operator):
         return subset
 
     def update(self, obj: sg.Object):
-        assert self.when == obj.when
-        self.color = obj.color
-        self.shape = obj.shape
 
+        self.color = obj.color if self.color.has_value else self.color
+        self.shape = obj.shape if self.shape.has_value else self.shape
         return True
 
     def get_expected_input(self, should_be, objset, epoch_now):
