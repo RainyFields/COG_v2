@@ -216,7 +216,6 @@ class Task(object):
         # Guess objects
         # Importantly, we generate objset backward in time
         ## xlei: only update the last epoch
-        ## xlei todo: delete distractor done
 
         epoch_now = n_epoch - 1
         for _ in range(n_distractor):
@@ -337,7 +336,6 @@ class TemporalTask(Task):
         # Guess objects
         # Importantly, we generate objset backward in time
         ## xlei: only update the last epoch
-        ## xlei todo: delete distractor done
 
         epoch_now = n_epoch - 1
         for _ in range(n_distractor):
@@ -356,68 +354,6 @@ class TemporalTask(Task):
 
         return objset
 
-
-class TemporalCompositeTask(Task):
-    @property
-    def instance_size(self):
-        pass
-
-    def __init__(self, tasks):
-        self.tasks = tasks
-
-    @property
-    def tasks(self):
-        return self._tasks
-
-    @tasks.setter
-    def tasks(self, tasks):
-        if not all(isinstance(task, TemporalTask) for task in tasks):
-            raise NotImplementedError()
-        self._tasks = tasks
-
-    def interleave_sequence(self):
-        return
-
-    # def generate_objset(self, n_epoch, n_distractor=0, average_memory_span=2):
-    #     '''
-    #
-    #     :param n_epoch: total number of epochs, doesn't really matter as an argument
-    #     :param n_distractor: n_distractors is same for all tasks
-    #     :param average_memory_span: same for all tasks
-    #     :return: objset
-    #     '''
-    #     n_max_backtrack = int(average_memory_span * 3)  ### why do this convertion? waste of time?
-    #     full_objset = sg.ObjectSet(n_epoch=n_epoch, n_max_backtrack=n_max_backtrack)
-    #
-    #     # TODO(mbai): make frame_info, convert task flag info to frames_info
-    #     # TODO(mbai): change tg.select for checking visual stimuli conflicts
-    #     assert all(isinstance(task, TemporalTask) for task in self.tasks)
-    #     print(', '.join([str(task) for task in self.tasks]))
-    #
-    #     # init full_task_info
-    #     first_task = self.tasks[0]
-    #     objset = first_task.generate_objset(first_task.n_frames, n_distractor, average_memory_span)
-    #     epoch_now = first_task.n_frames - 1
-    #     # TODO(mbai): fix taskinfoconvert
-    #     full_task_info = conv.TaskInfoConvert(task=first_task, objset=objset)
-    #
-    #     for i, cur_task in enumerate(self.tasks[1:]):
-    #         ###TODO(mbai): identify task when
-    #         n_epoch_cur = cur_task.n_frames
-    #         epoch_now += n_epoch_cur
-    #         cur_objset = cur_task.generate_objset(n_epoch_cur, n_distractor, average_memory_span)
-    #         not_merged = True
-    #         while not_merged:
-    #             # change task instruction
-    #             # if not first loop, then reuse set to 1 or something
-    #             cur_task_info = conv.TaskInfoConvert(cur_task,cur_objset)
-    #             if full_task_info.merge(cur_task_info):
-    #                 pass
-    #
-    #     return full_task_info
-
-    def get_target(self, objset):
-        raise NotImplementedError()
 
 
 class Operator(object):

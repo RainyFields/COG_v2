@@ -14,7 +14,6 @@
 # ==============================================================================
 
 """A bank of available tasks."""
-# TODO: n_epochs
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -88,7 +87,6 @@ class GoShape(TemporalTask):
         objs1 = tg.Select(shape=shape1, when=when1)
         self._operator = tg.Go(objs1)
 
-        ### todo: make it simple and consistent with others
         self.n_frames = const.compare_when([when1]) + 1
 
     @property
@@ -221,7 +219,6 @@ class CompareShapeTemporal(TemporalTask):
 class CompareLocTemporal(TemporalTask):
     """Compare color between two objects."""
 
-    # TODO: fix
     def __init__(self):
         super(CompareLocTemporal, self).__init__()
         when1, when2 = sg.sample_when(2)

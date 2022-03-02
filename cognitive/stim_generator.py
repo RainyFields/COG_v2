@@ -141,7 +141,7 @@ class Loc(Attribute):
 
         Args:
           value: None or a tuple of floats
-          space: None or a tuple of tuple of floats  ##### todo: what is the space here?
+          space: None or a tuple of tuple of floats
           If tuple of floats, then the actual
         """
         super(Loc, self).__init__(value)
@@ -500,9 +500,7 @@ class ObjectSet(object):
         else:
             if merge_idx is None:
                 try:
-                    # TODO: update obj.epoch
                     obj.epoch = [epoch_now - const.LASTMAP[obj.when], epoch_now - const.LASTMAP[obj.when] + 1]
-                    ### todo: check whether it needs a shift
                 except:
                     raise NotImplementedError(
                         'When value: {:s} is not implemented'.format(str(obj.when)))
@@ -681,7 +679,7 @@ def render_static_obj(canvas, obj, img_size):
     # Fixed specifications, see Space.sample()
     # when sampling, the most top-left position is (0.1, 0.1),
     # most bottom-right position is (0.9,0.9)
-    # TODO: change scaling (space.sample)
+    # changing scaling requires changing space.sample)
     radius = int(0.125 * img_size)
 
     # Note that OpenCV color is (Blue, Green, Red)

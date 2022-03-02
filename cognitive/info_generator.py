@@ -20,7 +20,6 @@ class TaskInfoCompo(object):
         # combining with a second task should be implemented incrementally
         assert isinstance(task, tg.TemporalTask)
 
-        # TODO: add action flag to frames
         self.task_objset = dict()
         self.tasks = [task]
         self.changed = list()
@@ -57,7 +56,6 @@ class TaskInfoCompo(object):
         :return: list of dictionaries containing information about the requested tasks
         """
         examples = list()
-        # TODO: keep track of soft_update
         for i, task in enumerate(self.tasks):
             examples.append({
                 'family': str(task.__class__.__name__),
@@ -99,7 +97,6 @@ class TaskInfoCompo(object):
         combine new task to the existing composite task
         :param reuse: probability of reusing visual stimuli from previous composite task
         :param new_task_info: TaskInfoCombo object
-        :return: None True if reuse, False if no reuse
         """
         # TODO(mbai): change task instruction here
         # TODO: very specific task instruction (related to remembering, forgetting, etc)
@@ -115,7 +112,6 @@ class TaskInfoCompo(object):
 
         start = self.frame_info.get_start_frame(new_task_info, relative_tasks={new_task_idx})
 
-        curr_abs_idx = start
         changed = False
         for i, (old_frame, new_frame) in enumerate(zip(self.frame_info[start:], new_task_info.frame_info)):
             # if there are no objects in the frame, then freely merge
@@ -125,22 +121,19 @@ class TaskInfoCompo(object):
                 # reuse stimuli with probability reuse
                 if np.random.random() < reuse:
                     # check how many selects and if there are enough objects for the selects
-
                     if new_task.reinit(old_frame.objs) and new_task_copy.reinit(old_frame.objs, True):
                         changed = True
                     else:
                         old_frame.compatible_merge(new_frame)
                 else:
                     old_frame.compatible_merge(new_frame)
-            curr_abs_idx += 1
         if changed:
             self.changed.append((new_task_idx, new_task, new_task_copy))
             self.task_objset[new_task_idx] = self.get_changed_task_objset(new_task_copy)
+            print(self.task_objset[new_task_idx], i)
         else:
             self.task_objset[new_task_idx] = new_task_info.task_objset[0]
-
         self.tasks.append(new_task)
-        # TODO: refactor by making updating functions
 
 
 class FrameInfo(object):
@@ -236,11 +229,8 @@ class FrameInfo(object):
         # to maintain preexisting order
 
         first_shareable = self.first_shareable
-
         shareable_frames = self.frame_list[first_shareable:]
-
         new_task_len = new_task_info.n_epochs
-
         new_first_shareable = new_task_info.tasks[0].first_shareable
 
         # update the relative_task for each frame in the new task (from 0 to new task idx)
@@ -284,7 +274,6 @@ class FrameInfo(object):
                 # if so, then shift starting frame
                 elif first_shareable == self.last_task_start \
                         and first_shareable + new_task_len - 1 <= self.last_task_end:
-                    # TODO: check last_task_end
                     first_shareable += 1
                 else:
                     aligned = True
@@ -303,7 +292,7 @@ class FrameInfo(object):
     class Frame(object):
         """ frame object within frame_info list"""
 
-        def __init__(self, fi, idx, relative_tasks, description=None, action=None, objs=None):
+        def __init__(self, fi, idx, relative_tasks, description=None, objs=None):
             assert isinstance(fi, FrameInfo)
             assert isinstance(relative_tasks, set)
 
@@ -311,7 +300,6 @@ class FrameInfo(object):
             self.idx = idx
             self.relative_tasks = relative_tasks
             self.description = description if description else list()
-            self.action = action if action else list()
             self.objs = objs if objs else list()
 
             self.relative_task_epoch_idx = dict()
@@ -323,7 +311,6 @@ class FrameInfo(object):
 
             self.relative_tasks = self.relative_tasks | new_frame.relative_tasks
             self.description = self.description + new_frame.description
-            self.action = self.action + new_frame.action
 
             for new_obj in new_frame.objs:
                 last_added_obj = self.fi.objset.last_added_obj
