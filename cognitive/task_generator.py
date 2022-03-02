@@ -216,7 +216,6 @@ class Task(object):
         # Guess objects
         # Importantly, we generate objset backward in time
         ## xlei: only update the last epoch
-        ## xlei todo: delete distractor done
 
         epoch_now = n_epoch - 1
         for _ in range(n_distractor):
@@ -242,16 +241,21 @@ class Task(object):
 
 
 class TemporalTask(Task):
-    @property
-    def instance_size(self):
-        pass
-
     def __init__(self, operator=None, n_frames=None, first_shareable=None):
         super(TemporalTask, self).__init__(operator)
         self.n_frames = n_frames
         self._first_shareable = first_shareable
         self.n_distractors = None
         self.avg_mem = None
+
+    def copy(self):
+        new_task = TemporalTask()
+        new_task.n_frames = self.n_frames
+        new_task._first_shareable = self.first_shareable
+        new_task.n_distractors = self.n_distractors
+        new_task.avg_mem = self.avg_mem
+        new_task._operator = self._operator
+        return new_task
 
     @property
     def first_shareable(self, seed=None):
@@ -267,27 +271,36 @@ class TemporalTask(Task):
             self._first_shareable = np.random.choice(np.arange(0, self.n_frames + 1))
         return self._first_shareable
 
-    def reinit(self, objs: List[sg.Object]):
+    @property
+    def instance_size(self):
+        pass
+
+    def reinit(self, objs: List[sg.Object], hard_update=False):
         '''
-        :return: True if reinit is successful, false otherwise
+        update the task in-place based on provided objects
+        :return: True if reinit is successful, False otherwise
         '''
         assert all([o.when == objs[0].when for o in objs])
 
         nodes = self.topological_sort()
         selects = [node for node in nodes if isinstance(node, Select)]
         # find all selects that are leaves in the operator graph with the same when as the objects
-        filter_select = [s for s in selects if self.check_attrs(s) and s.when == objs[0].when]
+        filter_select = [s for s in selects if self.check_attrs(s)]
 
         # check if there are not enough objects
         if len(objs) < len(filter_select):
-            return False
+            return None
 
         if filter_select:
             filter_objs = random.sample(objs, k=len(filter_select))
             for select, obj in zip(filter_select, filter_objs):
                 try:
-                    if not select.update(obj):
-                        return False
+                    if not hard_update:
+                        if not select.soft_update(obj):
+                            return False
+                    else:
+                        if not select.hard_update(obj):
+                            return False
                 except ValueError:
                     return False
             return True
@@ -323,7 +336,6 @@ class TemporalTask(Task):
         # Guess objects
         # Importantly, we generate objset backward in time
         ## xlei: only update the last epoch
-        ## xlei todo: delete distractor done
 
         epoch_now = n_epoch - 1
         for _ in range(n_distractor):
@@ -342,68 +354,6 @@ class TemporalTask(Task):
 
         return objset
 
-
-class TemporalCompositeTask(Task):
-    @property
-    def instance_size(self):
-        pass
-
-    def __init__(self, tasks):
-        self.tasks = tasks
-
-    @property
-    def tasks(self):
-        return self._tasks
-
-    @tasks.setter
-    def tasks(self, tasks):
-        if not all(isinstance(task, TemporalTask) for task in tasks):
-            raise NotImplementedError()
-        self._tasks = tasks
-
-    def interleave_sequence(self):
-        return
-
-    # def generate_objset(self, n_epoch, n_distractor=0, average_memory_span=2):
-    #     '''
-    #
-    #     :param n_epoch: total number of epochs, doesn't really matter as an argument
-    #     :param n_distractor: n_distractors is same for all tasks
-    #     :param average_memory_span: same for all tasks
-    #     :return: objset
-    #     '''
-    #     n_max_backtrack = int(average_memory_span * 3)  ### why do this convertion? waste of time?
-    #     full_objset = sg.ObjectSet(n_epoch=n_epoch, n_max_backtrack=n_max_backtrack)
-    #
-    #     # TODO(mbai): make frame_info, convert task flag info to frames_info
-    #     # TODO(mbai): change tg.select for checking visual stimuli conflicts
-    #     assert all(isinstance(task, TemporalTask) for task in self.tasks)
-    #     print(', '.join([str(task) for task in self.tasks]))
-    #
-    #     # init full_task_info
-    #     first_task = self.tasks[0]
-    #     objset = first_task.generate_objset(first_task.n_frames, n_distractor, average_memory_span)
-    #     epoch_now = first_task.n_frames - 1
-    #     # TODO(mbai): fix taskinfoconvert
-    #     full_task_info = conv.TaskInfoConvert(task=first_task, objset=objset)
-    #
-    #     for i, cur_task in enumerate(self.tasks[1:]):
-    #         ###TODO(mbai): identify task when
-    #         n_epoch_cur = cur_task.n_frames
-    #         epoch_now += n_epoch_cur
-    #         cur_objset = cur_task.generate_objset(n_epoch_cur, n_distractor, average_memory_span)
-    #         not_merged = True
-    #         while not_merged:
-    #             # change task instruction
-    #             # if not first loop, then reuse set to 1 or something
-    #             cur_task_info = conv.TaskInfoConvert(cur_task,cur_objset)
-    #             if full_task_info.merge(cur_task_info):
-    #                 pass
-    #
-    #     return full_task_info
-
-    def get_target(self, objset):
-        raise NotImplementedError()
 
 
 class Operator(object):
@@ -489,11 +439,14 @@ class Select(Operator):
 
         return subset
 
-    def update(self, obj: sg.Object):
-        assert self.when == obj.when
+    def hard_update(self, obj: sg.Object):
         self.color = obj.color
         self.shape = obj.shape
+        return True
 
+    def soft_update(self, obj: sg.Object):
+        self.color = obj.color if self.color.has_value else self.color
+        self.shape = obj.shape if self.shape.has_value else self.shape
         return True
 
     def get_expected_input(self, should_be, objset, epoch_now):

@@ -21,21 +21,24 @@ from __future__ import print_function
 
 import itertools
 import string
+import os
 import numpy as np
 
 AVG_MEM = 4
 MAX_MEMORY = 4
 LASTMAP = {}
-for k in range(MAX_MEMORY+1):
-    LASTMAP["last%d"%(k)] = k
+for k in range(MAX_MEMORY + 1):
+    LASTMAP["last%d" % (k)] = k
 
 ALLWHENS = []
-for k in range(MAX_MEMORY+1):
+for k in range(MAX_MEMORY + 1):
     ALLWHENS.append("last%d" % (k))
-ALLWHENS_PROB = [1/(MAX_MEMORY+1)] * len(ALLWHENS)
+ALLWHENS_PROB = [1 / (MAX_MEMORY + 1)] * len(ALLWHENS)
+
 
 def compare_when(when_list):
     return max(list(map(lambda x: LASTMAP[x], when_list)))
+
 
 def get_target_value(t):
     # Convert target t to string and convert True/False target values
@@ -47,6 +50,7 @@ def get_target_value(t):
     if t is False or t == 'False':
         return 'false'
     return t
+
 
 # RGB, from https://sashat.me/2017/01/11/list-of-20-simple-distinct-colors/
 WORD2COLOR = {
@@ -73,15 +77,32 @@ WORD2COLOR = {
     'white': (255, 255, 255)
 }
 
+OBJECT2ID = {
+    "watercraft": 0,
+    "rifle": 3,
+    "display": 4,
+    "lamp": 5,
+    "speaker": 6,
+    "cabinet": 7,
+    "chair": 8,
+    "bench": 9,
+    "car": 10,
+    "airplane": 11,
+    "sofa": 12,
+    "table": 1,
+    "phone": 2
+}
+
 ALLSPACES = ['left', 'right', 'top', 'bottom']
 ALLCOLORS = ['red', 'green', 'blue', 'yellow', 'purple', 'orange']
 ALLSHAPES = ['circle', 'square', 'cross', 'triangle', 'vbar', 'hbar']
-
+ALLOBJECTS = list(OBJECT2ID.keys())
 # Comment out the following to use a smaller set of colors and shapes
 # ALLCOLORS += [
 #     'cyan', 'magenta', 'lime', 'pink', 'teal', 'lavender', 'brown', 'beige',
 #     'maroon', 'mint', 'olive', 'coral', 'navy', 'grey', 'white']
 ALLSHAPES += list(string.ascii_lowercase)
+ALLSHAPES += list(OBJECT2ID.keys())
 
 ALLCOLORSHAPES = [x for x in itertools.product(ALLCOLORS, ALLSHAPES)]
 
@@ -90,16 +111,16 @@ INVALID = 'invalid'
 
 # Allowed vocabulary, the first word is invalid
 INPUTVOCABULARY = [
-    'invalid',
-    '.', ',', '?',
-    'object', 'color', 'shape',
-    'loc', 'on',
-    'if', 'then', 'else',
-    'exist',
-    'equal', 'and',
-    'the', 'of', 'with',
-    'point',
-] + ALLSPACES + ALLCOLORS + ALLSHAPES + ALLWHENS
+                      'invalid',
+                      '.', ',', '?',
+                      'object', 'color', 'shape',
+                      'loc', 'on',
+                      'if', 'then', 'else',
+                      'exist',
+                      'equal', 'and',
+                      'the', 'of', 'with',
+                      'point',
+                  ] + ALLSPACES + ALLCOLORS + ALLSHAPES + ALLWHENS
 # For faster str -> index lookups
 INPUTVOCABULARY_DICT = dict([(k, i) for i, k in enumerate(INPUTVOCABULARY)])
 
@@ -109,17 +130,21 @@ OUTPUTVOCABULARY = ['true', 'false'] + ALLCOLORS + ALLSHAPES
 
 # Maximum number of words in a sentence
 MAXSEQLENGTH = 25
-
+dir_path = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
+                        'data')
+if not os.path.exists(dir_path):
+    print('Data folder does not exist.')
 
 # If use popvec out_type
 def get_prefs(grid_size):
-  prefs_y, prefs_x = (np.mgrid[0:grid_size, 0:grid_size]) / (grid_size - 1.)
-  prefs_x = prefs_x.flatten().astype('float32')
-  prefs_y = prefs_y.flatten().astype('float32')
+    prefs_y, prefs_x = (np.mgrid[0:grid_size, 0:grid_size]) / (grid_size - 1.)
+    prefs_x = prefs_x.flatten().astype('float32')
+    prefs_y = prefs_y.flatten().astype('float32')
 
-  # numpy array (Grid_size**2, 2)
-  prefs = (np.array([prefs_x, prefs_y]).astype('float32')).T
-  return prefs
+    # numpy array (Grid_size**2, 2)
+    prefs = (np.array([prefs_x, prefs_y]).astype('float32')).T
+    return prefs
+
 
 GRID_SIZE = 7
 PREFS = get_prefs(GRID_SIZE)
@@ -131,4 +156,4 @@ config = {'dataset': 'yang',
           'out_voc_size': len(OUTPUTVOCABULARY),
           'maxseqlength': MAXSEQLENGTH,
           'prefs': PREFS,
-         }
+          }
