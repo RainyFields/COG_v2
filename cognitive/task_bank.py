@@ -254,6 +254,7 @@ task_family_dict = OrderedDict([
 ])
 
 
+
 def random_task(task_family):
     """Return a random question from the task family."""
     return task_family_dict[task_family[random.randint(0, len(task_family) - 1)]]()

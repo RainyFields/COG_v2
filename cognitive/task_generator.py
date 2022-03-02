@@ -242,16 +242,21 @@ class Task(object):
 
 
 class TemporalTask(Task):
-    @property
-    def instance_size(self):
-        pass
-
     def __init__(self, operator=None, n_frames=None, first_shareable=None):
         super(TemporalTask, self).__init__(operator)
         self.n_frames = n_frames
         self._first_shareable = first_shareable
         self.n_distractors = None
         self.avg_mem = None
+
+    def copy(self):
+        new_task = TemporalTask()
+        new_task.n_frames = self.n_frames
+        new_task._first_shareable = self.first_shareable
+        new_task.n_distractors = self.n_distractors
+        new_task.avg_mem = self.avg_mem
+        new_task._operator = self._operator
+        return new_task
 
     @property
     def first_shareable(self, seed=None):
@@ -267,9 +272,14 @@ class TemporalTask(Task):
             self._first_shareable = np.random.choice(np.arange(0, self.n_frames + 1))
         return self._first_shareable
 
-    def reinit(self, objs: List[sg.Object]):
+    @property
+    def instance_size(self):
+        pass
+
+    def reinit(self, objs: List[sg.Object], hard_update=False):
         '''
-        :return: True if reinit is successful, false otherwise
+        update the task in-place based on provided objects
+        :return: True if reinit is successful, False otherwise
         '''
         assert all([o.when == objs[0].when for o in objs])
 
@@ -280,14 +290,18 @@ class TemporalTask(Task):
 
         # check if there are not enough objects
         if len(objs) < len(filter_select):
-            return False
+            return None
 
         if filter_select:
             filter_objs = random.sample(objs, k=len(filter_select))
             for select, obj in zip(filter_select, filter_objs):
                 try:
-                    if not select.update(obj):
-                        return False
+                    if not hard_update:
+                        if not select.soft_update(obj):
+                            return False
+                    else:
+                        if not select.hard_update(obj):
+                            return False
                 except ValueError:
                     return False
             return True
@@ -489,8 +503,12 @@ class Select(Operator):
 
         return subset
 
-    def update(self, obj: sg.Object):
+    def hard_update(self, obj: sg.Object):
+        self.color = obj.color
+        self.shape = obj.shape
+        return True
 
+    def soft_update(self, obj: sg.Object):
         self.color = obj.color if self.color.has_value else self.color
         self.shape = obj.shape if self.shape.has_value else self.shape
         return True

@@ -188,9 +188,9 @@ class Space(Attribute):
 
         n_max_try = 100
         avoid_radius2 = 0.04  # avoid radius squared
-        dx = (self._value[0][1] - self._value[0][0]) * 0.1
+        dx = (self._value[0][1] - self._value[0][0]) * 0.125
         xrange = (self._value[0][0] + dx, self._value[0][1] - dx)
-        dy = (self._value[1][1] - self._value[1][0]) * 0.1
+        dy = (self._value[1][1] - self._value[1][0]) * 0.125
         yrange = (self._value[1][0] + dy, self._value[1][1] - dy)
         for i_try in range(n_max_try):
             # Round to 3 decimal places to save space in json dump
@@ -334,7 +334,7 @@ class Object(object):
 
     def compare_attrs(self, other, attrs=None):
         if attrs is None:
-            attrs = ['color', 'shape', 'when']
+            attrs = ['color', 'shape']
         if isinstance(other, Object):
             for attr in attrs:
                 if getattr(self, attr) != getattr(other, attr):
@@ -669,7 +669,6 @@ def get_shapenet_object(category, obj_size):
     img = Image.open(obj_path).convert('RGB').resize(obj_size)
     return img
 
-
 def render_static_obj(canvas, obj, img_size):
     """Render a single object.
 
@@ -683,7 +682,7 @@ def render_static_obj(canvas, obj, img_size):
     # when sampling, the most top-left position is (0.1, 0.1),
     # most bottom-right position is (0.9,0.9)
     # TODO: change scaling (space.sample)
-    radius = int(0.05 * img_size)
+    radius = int(0.125 * img_size)
 
     # Note that OpenCV color is (Blue, Green, Red)
     center = (int(obj.loc[0] * img_size), int(obj.loc[1] * img_size))

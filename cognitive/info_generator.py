@@ -57,8 +57,7 @@ class TaskInfoCompo(object):
         :return: list of dictionaries containing information about the requested tasks
         """
         examples = list()
-        # TODO: fix "answers" in cases of merged objset and task is changed
-        # TODO: debug validation #7
+        # TODO: keep track of soft_update
         for i, task in enumerate(self.tasks):
             examples.append({
                 'family': str(task.__class__.__name__),
@@ -109,6 +108,7 @@ class TaskInfoCompo(object):
             raise NotImplementedError('Currently cannot support adding new composite tasks')
 
         new_task = new_task_info.tasks[0]
+        new_task_copy: tg.TemporalTask = new_task.copy()
         new_task_idx = len(self.tasks)
         if reuse is None:
             reuse = 0.5
@@ -125,7 +125,8 @@ class TaskInfoCompo(object):
                 # reuse stimuli with probability reuse
                 if np.random.random() < reuse:
                     # check how many selects and if there are enough objects for the selects
-                    if new_task.reinit(old_frame.objs):
+
+                    if new_task.reinit(old_frame.objs) and new_task_copy.reinit(old_frame.objs, True):
                         changed = True
                     else:
                         old_frame.compatible_merge(new_frame)
@@ -133,8 +134,8 @@ class TaskInfoCompo(object):
                     old_frame.compatible_merge(new_frame)
             curr_abs_idx += 1
         if changed:
-            self.changed.append(new_task_idx)
-            self.task_objset[new_task_idx] = self.get_changed_task_objset(new_task)
+            self.changed.append((new_task_idx, new_task, new_task_copy))
+            self.task_objset[new_task_idx] = self.get_changed_task_objset(new_task_copy)
         else:
             self.task_objset[new_task_idx] = new_task_info.task_objset[0]
 
